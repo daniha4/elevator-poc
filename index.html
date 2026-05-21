@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Elevator Fault Finder</title>
+  <link rel="manifest" href="./manifest.json">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:      #000000;
+      --surface: #0d0d14;
+      --card:    #141420;
+      --card2:   #1a1a28;
+      --border:  #252538;
+      --text:    #f0f0f8;
+      --text2:   #8888aa;
+      --text3:   #3d3d58;
+      --accent:  #4f9cf9;
+      --accent2: #2e7fe0;
+      --tke:     #ff5555;
+      --kone:    #4f9cf9;
+      --sch:     #ff79c6;
+      --otis:    #8be9fd;
+      --green:   #50fa7b;
+      --red:     #ff5555;
+      --orange:  #ffb86c;
+      --nav-h:   62px;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      font-size: 15px;
+      overscroll-behavior: none;
+    }
+
+    /* ═══ TABS ══════════════════════════════════════════════ */
+    .tab { display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+    .tab.active { display: flex; }
+
+    /* ═══ HEADER ════════════════════════════════════════════ */
+    .hdr {
+      background: #050510;
+      border-bottom: 1px solid var(--border);
+      padding: 0 14px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 8px;
+    }
+    .hdr-brand { display: flex; align-items: center; gap: 9px; }
+    .hdr-icon {
+      width: 34px; height: 34px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), #2e7fe0);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 0 12px rgba(79,156,249,.3);
+    }
+    .hdr-name { font-size: 0.95rem; font-weight: 700; letter-spacing: -.2px; }
+    .hdr-sub  { font-size: 0.55rem; color: var(--text3); letter-spacing: 0.8px; text-transform: uppercase; margin-top: 1px; }
+    .hdr-pill {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 11px;
+      font-size: 0.68rem;
+      color: var(--text2);
+      white-space: nowrap;
+      transition: color .3s, border-color .3s;
+    }
+    .hdr-pill.ready { color: var(--green); border-color: rgba(80,250,123,.3); }
+
+    /* ═══ BOTTOM NAV ═════════════════════════════════════════ */
+    .bottom-nav {
+      flex-shrink: 0;
+      display: flex;
+      height: var(--nav-h);
+      background: #050510;
+      border-top: 1px solid var(--border);
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px; cursor: pointer; border: none;
+      background: none; color: var(--text3);
+      font-size: 0.6rem; font-weight: 600;
+      letter-spacing: 0.3px; text-transform: uppercase;
+      transition: color .15s; padding-bottom: 4px;
+    }
+    .nav-btn .nav-icon { font-size: 1.3rem; line-height: 1; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn.active .nav-icon { filter: drop-shadow(0 0 4px var(--accent)); }
+
+    /* ═══ FILTER ROW ═════════════════════════════════════════ */
+    .filter-row {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 7px 10px;
+      display: flex; gap: 5px;
+      overflow-x: auto; scrollbar-width: none;
+      flex-shrink: 0; align-items: center;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-label { font-size: 0.58rem; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: .6px; margin-left: 4px; white-space: nowrap; }
+
+    .mfr-chip {
+      flex-shrink: 0;
+      border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 5px 13px;
+      cursor: pointer; background: var(--card);
+      color: var(--text2); font-size: 0.82rem;
+      font-weight: 700; transition: all .15s;
+      white-space: nowrap; display: flex;
+      flex-direction: column; align-items: center;
+      line-height: 1; gap: 2px;
+    }
+    .mfr-chip small { font-size: 0.5rem; font-weight: 400; opacity: 0.55; letter-spacing: .2px; }
+    .mfr-chip:active { transform: scale(0.95); }
+    .mfr-chip.all.active  { background: rgba(79,156,249,.15); border-color: var(--accent); color: var(--accent); }
+    .mfr-chip.tke.active  { background: rgba(255,85,85,.13);  border-color: var(--tke);  color: var(--tke); }
+    .mfr-chip.kone.active { background: rgba(79,156,249,.13); border-color: var(--kone); color: var(--kone); }
+    .mfr-chip.sch.active  { background: rgba(255,121,198,.13);border-color: var(--sch);  color: var(--sch); }
+    .mfr-chip.otis.active { background: rgba(139,233,253,.13);border-color: var(--otis); color: var(--otis); }
+
+    .ctrl-row {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 10px; display: flex; gap: 5px;
+      overflow-x: auto; scrollbar-width: none;
+      align-items: center; flex-shrink: 0; min-height: 40px;
+    }
+    .ctrl-row::-webkit-scrollbar { display: none; }
+    .ctrl-row.hidden { display: none; }
+    .ctrl-chip {
+      flex-shrink: 0;
+      border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 4px 12px;
+      font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; background: var(--card);
+      color: var(--text2); transition: all .15s; white-space: nowrap;
+    }
+    .ctrl-chip .cnt { font-size: 0.54rem; opacity: .45; margin-right: 3px; }
+    .ctrl-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ═══ SEARCH BAR ═════════════════════════════════════════ */
+    .search-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 11px; display: flex; gap: 7px; flex-shrink: 0;
+    }
+    .search-input {
+      flex: 1; background: #080814;
+      border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 11px 14px;
+      font-size: 1.05rem; color: var(--text);
+      direction: ltr; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      -webkit-appearance: none;
+    }
+    .search-input::placeholder { color: var(--text3); }
+    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,156,249,.15); }
+    .search-go {
+      background: var(--accent); border: none;
+      border-radius: 10px; padding: 11px 18px;
+      font-size: 0.88rem; font-weight: 700;
+      color: #fff; cursor: pointer;
+      transition: background .15s, transform .1s; white-space: nowrap;
+    }
+    .search-go:active { background: var(--accent2); transform: scale(0.97); }
+
+    /* ═══ RESULTS ════════════════════════════════════════════ */
+    .results-area { flex: 1; overflow-y: auto; padding: 10px 11px 20px; }
+    .result-count {
+      font-size: 0.68rem; color: var(--text3);
+      margin-bottom: 9px; padding: 0 2px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .auto-detect-badge {
+      background: rgba(80,250,123,.1);
+      border: 1px solid rgba(80,250,123,.25);
+      color: var(--green); font-size: 0.58rem;
+      font-weight: 700; padding: 2px 7px;
+      border-radius: 4px; letter-spacing: .4px;
+    }
+
+    /* ═══ FAULT CARD ══════════════════════════════════════════ */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: 9px;
+      overflow: hidden; position: relative;
+    }
+    .card::before {
+      content: ''; position: absolute;
+      right: 0; top: 0; bottom: 0; width: 3px;
+    }
+    .card.is-fault::before { background: var(--red); }
+    .card.is-warn::before  { background: var(--orange); }
+    .card.is-ok::before    { background: rgba(80,250,123,.5); }
+
+    .card-head {
+      display: flex; align-items: center;
+      gap: 10px; padding: 11px 13px 8px;
+    }
+    .card-codes {
+      display: flex; flex-direction: column;
+      align-items: center; flex-shrink: 0;
+      gap: 4px; min-width: 56px;
+    }
+    .card-code {
+      font-size: 2.2rem; font-weight: 900;
+      color: #fff; text-align: center; line-height: 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1px; width: 100%;
+    }
+    .card-display-val {
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem; font-weight: 900;
+      color: #ffb86c;
+      background: rgba(255,184,108,0.1);
+      border: 1.5px solid rgba(255,184,108,0.35);
+      border-radius: 4px; padding: 1px 7px;
+      letter-spacing: 2px; text-align: center;
+      width: 100%; line-height: 1.35;
+    }
+    .card-meta { flex: 1; min-width: 0; }
+    .card-src {
+      font-size: 0.7rem; font-weight: 800;
+      margin-bottom: 3px; display: flex;
+      align-items: center; gap: 5px; flex-wrap: wrap;
+    }
+    .src-mfr {
+      padding: 2px 7px; border-radius: 4px;
+      font-size: 0.63rem; font-weight: 800; letter-spacing: .3px;
+    }
+    .src-mfr.tke  { background: rgba(255,85,85,.15);   color: var(--tke); }
+    .src-mfr.kone { background: rgba(79,156,249,.15);  color: var(--kone); }
+    .src-mfr.sch  { background: rgba(255,121,198,.15); color: var(--sch); }
+    .src-mfr.otis { background: rgba(139,233,253,.15); color: var(--otis); }
+    .src-ctrl { font-size: 0.72rem; color: var(--text2); font-weight: 700; }
+
+    .badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+    .badge {
+      display: inline-flex; align-items: center;
+      border-radius: 4px; padding: 1px 6px;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: .3px;
+    }
+    .badge-fault { background: rgba(255,85,85,.12); border: 1px solid rgba(255,85,85,.28); color: var(--red); }
+    .badge-prio1 { background: rgba(255,85,85,.1);  border: 1px solid rgba(255,85,85,.25); color: var(--red); }
+    .badge-prio2 { background: rgba(255,184,108,.1);border: 1px solid rgba(255,184,108,.25);color: var(--orange); }
+    .badge-prio3 { background: rgba(80,250,123,.08);border: 1px solid rgba(80,250,123,.22); color: var(--green); }
+
+    .pdf-link {
+      flex-shrink: 0; background: transparent;
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 10px; font-size: 0.68rem; font-weight: 700;
+      color: var(--text2); text-decoration: none;
+      cursor: pointer; transition: all .15s;
+      white-space: nowrap; align-self: flex-start;
+    }
+    .pdf-link:active { border-color: var(--accent); color: var(--accent); }
+
+    .card-body { padding: 2px 13px 10px; direction: rtl; text-align: right; }
+    .card-nemonic {
+      font-size: 0.88rem; font-weight: 800; color: #fff;
+      font-family: 'Courier New', monospace; letter-spacing: .4px;
+      margin-bottom: 3px; direction: rtl; unicode-bidi: plaintext;
+    }
+    .card-desc { font-size: 0.82rem; color: var(--text2); line-height: 1.6; direction: rtl; unicode-bidi: plaintext; }
+
+    .card-foot {
+      padding: 5px 13px 6px; font-size: 0.58rem;
+      color: var(--text3); border-top: 1px solid rgba(255,255,255,0.04);
+      display: flex; align-items: center;
+      justify-content: space-between; opacity: 0.7;
+    }
+    .card-foot-file { font-family: monospace; }
+
+    /* ═══ EMPTY STATE ════════════════════════════════════════ */
+    .center-state { text-align: center; padding: 30px 16px 24px; color: var(--text2); }
+    .center-state .search-icon { font-size: 2.2rem; margin-bottom: 10px; opacity: 0.3; }
+    .center-state .search-title { font-size: 0.92rem; color: var(--text); margin-bottom: 18px; font-weight: 600; }
+    .hint-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: right; }
+    .hint-tile {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 13px 13px 11px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .hint-ico   { font-size: 1.25rem; margin-bottom: 2px; }
+    .hint-label { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+    .hint-sub   { font-size: 0.65rem; color: var(--text3); }
+
+    /* ═══ DRAWINGS TAB ══════════════════════════════════════ */
+    #tab-draw { background: var(--bg); }
+    .draw-search-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 9px 11px; display: flex; gap: 7px; flex-shrink: 0;
+    }
+    .draw-body { flex: 1; overflow-y: auto; padding: 10px 11px 20px; }
+    .section-title {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; color: var(--text3); margin: 14px 0 7px;
+    }
+    .section-title:first-child { margin-top: 0; }
+    .pdf-list-block {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .pdf-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; text-decoration: none;
+      color: var(--text); transition: background .12s; cursor: pointer;
+    }
+    .pdf-row:active { background: rgba(255,255,255,.04); }
+    .pdf-row + .pdf-row { border-top: 1px solid var(--border); }
+    .pdf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .pdf-dot.tke  { background: var(--tke); }
+    .pdf-dot.kone { background: var(--kone); }
+    .pdf-dot.sch  { background: var(--sch); }
+    .pdf-dot.otis { background: var(--otis); }
+    .pdf-dot.draw { background: var(--green); }
+    .pdf-name { flex: 1; font-size: 0.88rem; font-weight: 600; }
+    .pdf-tag  { font-size: 0.62rem; color: var(--text3); }
+    .pdf-arrow { color: var(--text3); font-size: 0.82rem; }
+    .pdf-empty { text-align: center; padding: 24px; color: var(--text3); font-size: 0.85rem; line-height: 1.7; }
+
+    .draw-search-input {
+      flex: 1; background: #080814;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 10px 13px; font-size: 0.95rem; color: var(--text);
+      direction: ltr; outline: none; transition: border-color .15s; -webkit-appearance: none;
+    }
+    .draw-search-input::placeholder { color: var(--text3); }
+    .draw-search-input:focus { border-color: var(--green); }
+
+    /* ═══ QR TAB ═════════════════════════════════════════════ */
+    #tab-qr { background: var(--bg); }
+    .qr-body { flex: 1; overflow-y: auto; padding: 12px 11px 20px; }
+    .camera-wrap {
+      position: relative; background: #000;
+      border-radius: 12px; overflow: hidden;
+      aspect-ratio: 4/3; max-height: 260px;
+      margin-bottom: 10px; border: 1px solid var(--border);
+    }
+    #qr-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .scan-rect {
+      width: 155px; height: 155px;
+      border: 2px solid rgba(79,156,249,.85);
+      border-radius: 10px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.45);
+    }
+    .scan-status { text-align: center; font-size: 0.8rem; color: var(--text2); margin-bottom: 10px; min-height: 20px; }
+    .scan-result {
+      background: rgba(80,250,123,.07);
+      border: 1px solid rgba(80,250,123,.25);
+      border-radius: 10px; padding: 12px 14px;
+      margin-bottom: 10px; display: none;
+    }
+    .scan-result-label { font-size: 0.65rem; color: var(--green); font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+    .scan-result-val { font-size: 0.9rem; font-weight: 600; font-family: monospace; }
+    .scan-result.visible { display: block; }
+    .scan-btn {
+      width: 100%; background: var(--accent); border: none;
+      border-radius: 10px; padding: 14px; font-size: 0.95rem;
+      font-weight: 700; color: #fff; cursor: pointer;
+      margin-bottom: 14px; transition: background .15s, transform .1s;
+    }
+    .scan-btn:active { background: var(--accent2); transform: scale(0.98); }
+    .scan-btn.active { background: #2a2a40; }
+    .qr-section-title {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; color: var(--text3); margin-bottom: 7px;
+    }
+    .qr-list { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .qr-item { display: flex; align-items: center; gap: 10px; padding: 9px 13px; }
+    .qr-item + .qr-item { border-top: 1px solid var(--border); }
+    .qr-mfr { font-size: 0.82rem; font-weight: 700; flex: 1; }
+    .qr-code { font-family: 'Courier New', monospace; font-size: 0.66rem; color: var(--text3); background: #080814; border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; }
+    .no-api-box {
+      background: rgba(255,184,108,.07); border: 1px solid rgba(255,184,108,.25);
+      border-radius: 10px; padding: 14px; text-align: center;
+      color: var(--orange); font-size: 0.85rem; line-height: 1.7; margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ FAULT SEARCH TAB ═══════════════════════ -->
+<div class="tab active" id="tab-fault">
+  <header class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-icon">⚡</div>
+      <div>
+        <div class="hdr-name">Elevator Fault Finder</div>
+        <div class="hdr-sub">Field Tool · Auto-Detect</div>
+      </div>
+    </div>
+    <div class="hdr-pill" id="pill">טוען...</div>
+  </header>
+
+  <div class="filter-row">
+    <span class="filter-label">יצרן:</span>
+    <button class="mfr-chip all active" data-mfr="" onclick="setMfr('')">הכל</button>
+    <button class="mfr-chip tke"  data-mfr="TKE"       onclick="setMfr('TKE')">TKE<small>CMC3 · CMC4</small></button>
+    <button class="mfr-chip kone" data-mfr="KONE"      onclick="setMfr('KONE')">KONE<small>KCE · KDL · LCE</small></button>
+    <button class="mfr-chip sch"  data-mfr="Schindler" onclick="setMfr('Schindler')">Schindler<small>3300 · 5500</small></button>
+    <button class="mfr-chip otis" data-mfr="Otis"      onclick="setMfr('Otis')">Otis</button>
+  </div>
+
+  <div class="ctrl-row hidden" id="ctrl-row"></div>
+
+  <div class="search-bar">
+    <input class="search-input" id="inp" type="text"
+           placeholder="קוד תקלה, שם תקלה..."
+           autocomplete="off" inputmode="text"
+           oninput="autoSearch()"
+           onkeydown="if(event.key==='Enter') doSearch()">
+    <button class="search-go" onclick="doSearch()">חפש</button>
+  </div>
+
+  <div class="results-area" id="results-area">
+    <div id="result-count" class="result-count" style="display:none"></div>
+    <div id="results"></div>
+  </div>
+</div>
+
+<!-- ══════════════ DRAWINGS TAB ════════════════════════════ -->
+<div class="tab" id="tab-draw">
+  <header class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-icon">📂</div>
+      <div>
+        <div class="hdr-name">מסמכים ומדריכים</div>
+        <div class="hdr-sub">Manuals · Drawings · Fault Codes</div>
+      </div>
+    </div>
+  </header>
+  <div class="draw-search-bar">
+    <input class="draw-search-input" id="draw-inp" type="text"
+           placeholder="חפש לפי יצרן, בקר, שם קובץ..."
+           autocomplete="off" oninput="filterDrawings()">
+  </div>
+  <div class="draw-body" id="draw-body"></div>
+</div>
+
+<!-- ══════════════ QR SCAN TAB ══════════════════════════════ -->
+<div class="tab" id="tab-qr">
+  <header class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-icon">📷</div>
+      <div>
+        <div class="hdr-name">זיהוי QR</div>
+        <div class="hdr-sub">QR Scanner · Auto Detect</div>
+      </div>
+    </div>
+  </header>
+  <div class="qr-body">
+    <div id="qr-camera-section">
+      <div class="camera-wrap" id="camera-wrap" style="display:none">
+        <video id="qr-video" playsinline muted></video>
+        <div class="scan-overlay"><div class="scan-rect"></div></div>
+      </div>
+      <div class="scan-result" id="scan-result">
+        <div class="scan-result-label">נסרק</div>
+        <div class="scan-result-val" id="scan-result-val"></div>
+      </div>
+      <div class="scan-status" id="scan-status">לחץ "פתח מצלמה" לסריקת QR</div>
+      <button class="scan-btn" id="scan-btn" onclick="toggleScan()">📷 פתח מצלמה</button>
+    </div>
+    <div id="qr-no-api" style="display:none">
+      <div class="no-api-box">⚠ BarcodeDetector לא זמין<br><small>השתמש ב-Chrome / Edge לסריקת QR</small></div>
+    </div>
+    <div class="qr-section-title">קודי QR להדפסה</div>
+    <div class="qr-list" id="qr-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════ BOTTOM NAV ══════════════════════════════ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-fault" onclick="showTab('fault')">
+    <span class="nav-icon">⚡</span><span>תקלות</span>
+  </button>
+  <button class="nav-btn" id="nav-draw" onclick="showTab('draw')">
+    <span class="nav-icon">📂</span><span>מסמכים</span>
+  </button>
+  <button class="nav-btn" id="nav-qr" onclick="showTab('qr')">
+    <span class="nav-icon">📷</span><span>זיהוי QR</span>
+  </button>
+</nav>
+
+<script src="./fault-index.js?v=1"></script>
+<script>
+/* ── DATA ─────────────────────────────────────────────────── */
+var CTRLS = {
+  TKE:       [['CMC4+','183'],['CMC4+20.50','232'],['CMC3','56']],
+  KONE:      [['KCE','477'],['KDL16','38'],['LCE','174']],
+  Schindler: [['3300','480'],['5500','313']],
+  Otis:      [],
+};
+
+var MFR_COLOR = { TKE:'tke', KONE:'kone', Schindler:'sch', Otis:'otis' };
+
+var PDF_LIST = [
+  { name:'CMC4+ Fault Codes',           file:'CMC4plus_FaultCodes.pdf',             mfr:'TKE',       tags:['cmc4','fault'] },
+  { name:'CMC4+20.50 FaultStack',        file:'TKE_CMC4_20.50_FaultStack.pdf',       mfr:'TKE',       tags:['cmc4','20.50','fault'] },
+  { name:'CMC3 Fault Codes',             file:'CMC3_FaultCodes_IRC34.pdf',           mfr:'TKE',       tags:['cmc3','fault'] },
+  { name:'KONE KCE קודי תקלות',          file:'KONE_KCE_fault_codes.pdf',            mfr:'KONE',      tags:['kce','fault'] },
+  { name:'KONE KCE BMT Manual',          file:'KONE_KCE_BMT.pdf',                    mfr:'KONE',      tags:['kce','bmt'] },
+  { name:'KONE KDL16 Diagnostics',       file:'KONE_KDL16_Faults.pdf',              mfr:'KONE',      tags:['kdl16','fault'] },
+  { name:'KONE MRL Fault Codes (LCE)',   file:'KONE_MRL_FaultCodes.pdf',            mfr:'KONE',      tags:['lce','mrl','fault'] },
+  { name:'Schindler 3300',               file:'Schindler_3300_Training.pdf',         mfr:'Schindler', tags:['3300'] },
+  { name:'Schindler 5500 יומן שגיאות',   file:'Schindler_5500_יומן_שגיאות.pdf',     mfr:'Schindler', tags:['5500','fault'] },
+];
+
+var QR_CODES = [
+  {mfr:'TKE',       ctrl:'CMC4+',      code:'ELEV:TKE:CMC4+'},
+  {mfr:'TKE',       ctrl:'CMC4+20.50', code:'ELEV:TKE:CMC4+20.50'},
+  {mfr:'TKE',       ctrl:'CMC3',       code:'ELEV:TKE:CMC3'},
+  {mfr:'KONE',      ctrl:'KCE',        code:'ELEV:KONE:KCE'},
+  {mfr:'KONE',      ctrl:'KDL16',      code:'ELEV:KONE:KDL16'},
+  {mfr:'KONE',      ctrl:'LCE',        code:'ELEV:KONE:LCE'},
+  {mfr:'Schindler', ctrl:'3300',       code:'ELEV:Schindler:3300'},
+  {mfr:'Schindler', ctrl:'5500',       code:'ELEV:Schindler:5500'},
+];
+
+/* ── STATE ────────────────────────────────────────────────── */
+var curMfr = '', curCtrl = '';
+var scanActive = false, scanStream = null, scanDetector = null, scanRaf = null;
+var searchDebounce = null;
+
+/* ── TABS ─────────────────────────────────────────────────── */
+function showTab(name) {
+  if (name !== 'qr') { stopScan(); }
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'draw') { renderDrawings(''); }
+}
+
+/* ── MANUFACTURER FILTER ──────────────────────────────────── */
+function setMfr(m) {
+  curMfr = m; curCtrl = '';
+  document.querySelectorAll('.mfr-chip').forEach(function(b){
+    b.classList.toggle('active', b.dataset.mfr === m);
+  });
+  var row = document.getElementById('ctrl-row');
+  if (m && CTRLS[m] && CTRLS[m].length) {
+    row.innerHTML = CTRLS[m].map(function(c){
+      return '<button class="ctrl-chip" data-ctrl="' + c[0] + '" onclick="setCtrl(\'' + c[0] + '\')">' +
+        c[0] + (c[1] ? '<span class="cnt">(' + c[1] + ')</span>' : '') + '</button>';
+    }).join('');
+    row.classList.remove('hidden');
+  } else {
+    row.innerHTML = ''; row.classList.add('hidden');
+  }
+  var kw = document.getElementById('inp').value.trim();
+  if (kw) { doSearch(); } else { showEmpty(); }
+}
+
+function setCtrl(c) {
+  curCtrl = c;
+  document.querySelectorAll('.ctrl-chip').forEach(function(b){
+    b.classList.toggle('active', b.dataset.ctrl === c);
+  });
+  var kw = document.getElementById('inp').value.trim();
+  if (kw) { doSearch(); }
+}
+
+/* ── SEARCH ───────────────────────────────────────────────── */
+function autoSearch() {
+  clearTimeout(searchDebounce);
+  var kw = document.getElementById('inp').value.trim();
+  if (!kw) { showEmpty(); return; }
+  searchDebounce = setTimeout(doSearch, 300);
+}
+
+function showEmpty() {
+  document.getElementById('result-count').style.display = 'none';
+  document.getElementById('results').innerHTML =
+    '<div class="center-state">' +
+    '<div class="search-icon">🔍</div>' +
+    '<div class="search-title">חיפוש קודי תקלה</div>' +
+    '<div class="hint-grid">' +
+    '<div class="hint-tile"><div class="hint-ico">🏭</div><div class="hint-label">חיפוש לפי יצרן</div><div class="hint-sub">Manufacturer</div></div>' +
+    '<div class="hint-tile"><div class="hint-ico">🎛</div><div class="hint-label">חיפוש לפי בקר</div><div class="hint-sub">Controller</div></div>' +
+    '<div class="hint-tile"><div class="hint-ico">🔢</div><div class="hint-label">חיפוש לפי קוד</div><div class="hint-sub">Fault Code</div></div>' +
+    '<div class="hint-tile"><div class="hint-ico">📋</div><div class="hint-label">חיפוש לפי תסמין</div><div class="hint-sub">Symptom</div></div>' +
+    '</div></div>';
+}
+
+function doSearch() {
+  clearTimeout(searchDebounce);
+  var kw = document.getElementById('inp').value.trim();
+  if (!kw) { showEmpty(); return; }
+
+  var rows = searchFaults(curMfr || null, curCtrl || null, kw);
+  var cnt = document.getElementById('result-count');
+  var res = document.getElementById('results');
+
+  if (!rows.length) {
+    cnt.style.display = 'none';
+    res.innerHTML = '<div class="center-state"><div class="search-icon">🔍</div>' +
+      '<div class="search-title">לא נמצאו תוצאות</div>' +
+      '<p style="font-size:.82rem;color:var(--text2)">קוד "' + kw + '" לא נמצא' +
+      (curMfr ? ' ב-' + curMfr : '') + '<br>נסה ללא סינון יצרן</p></div>';
+    return;
+  }
+
+  rows.sort(function(a,b){ return (b.has_code==='true')-(a.has_code==='true'); });
+  cnt.style.display = 'flex';
+  cnt.innerHTML = 'נמצאו <strong style="color:var(--text);margin:0 3px">' + rows.length + '</strong> תוצאות' +
+    (!curMfr ? ' <span class="auto-detect-badge">AUTO-DETECT</span>' : '');
+  res.innerHTML = rows.slice(0, 80).map(buildCard).join('');
+}
+
+/* ── BUILD CARD ───────────────────────────────────────────── */
+function buildCard(r) {
+  var rawPage = parseInt(r.page) || 0;
+  var realPage = (rawPage > 0 && rawPage < 1000) ? rawPage : null;
+  var pdfHref = './pdfs/' + r.file + (realPage ? '#page=' + realPage : '');
+
+  var raw = r.snippet.replace(/#/g,' ').replace(/\s+/g,' ').trim();
+  var parts = raw.split('|').map(function(s){ return s.trim(); });
+
+  var codeNum='', nemonic='', displayVal='', isFault=false, desc='', bdLabel='';
+
+  if (parts.length >= 2 && /^Code\s*[\d\-]+/i.test(parts[0])) {
+    codeNum = parts[0].replace(/^Code\s*/i,'').trim();
+    nemonic = parts[1];
+    if (nemonic.charAt(0)===':') { nemonic = nemonic.slice(1).trim(); }
+    if (parts[2] && parts[2].indexOf('תצוגה:')===0) {
+      displayVal = parts[2].replace('תצוגה:','').trim();
+      isFault    = parts[3] && parts[3].trim()==='FAULT';
+      desc       = parts.slice(4).join(' | ');
+    } else if (parts.length >= 4) {
+      bdLabel = parts[2]; desc = parts.slice(3).join(' | ');
+    } else if (parts.length >= 3) {
+      desc = parts[2];
+    }
+  } else { desc = raw; }
+
+  var prio = 0;
+  var pm = (nemonic + ' ' + desc).match(/עדיפות\s+(\d)/);
+  if (pm) { prio = parseInt(pm[1]); }
+  if (nemonic === desc) { nemonic = ''; }
+
+  var cardCls = 'card' + (isFault||prio===1?' is-fault':prio===2?' is-warn':' is-ok');
+  var mfrCls  = MFR_COLOR[r.normalized_manufacturer] || '';
+
+  var h = '<div class="' + cardCls + '">';
+  h += '<div class="card-head">';
+  h += '<div class="card-codes">';
+  if (codeNum) { h += '<div class="card-code">' + codeNum + '</div>'; }
+  if (displayVal) { h += '<div class="card-display-val">' + displayVal + '</div>'; }
+  h += '</div>';
+  h += '<div class="card-meta">';
+  h += '<div class="card-src">';
+  h += '<span class="src-mfr ' + mfrCls + '">' + r.normalized_manufacturer + '</span>';
+  h += '<span class="src-ctrl">' + r.normalized_controller + '</span>';
+  if (bdLabel) { h += '<span style="color:var(--text2);font-size:.62rem">' + bdLabel + '</span>'; }
+  h += '</div>';
+  h += '<div class="badges">';
+  if (isFault) { h += '<span class="badge badge-fault">⚠ FAULT</span>'; }
+  if (prio===1) { h += '<span class="badge badge-prio1">PRIO 1</span>'; }
+  if (prio===2) { h += '<span class="badge badge-prio2">PRIO 2</span>'; }
+  if (prio===3) { h += '<span class="badge badge-prio3">PRIO 3</span>'; }
+  h += '</div></div>';
+  h += '<a class="pdf-link" href="' + pdfHref + '" target="_blank">PDF ↗</a>';
+  h += '</div>';
+
+  if (nemonic || desc.length > 2) {
+    h += '<div class="card-body">';
+    if (nemonic) { h += '<div class="card-nemonic">' + nemonic + '</div>'; }
+    if (desc.length > 2 && !/^עדיפות/.test(desc)) {
+      h += '<div class="card-desc">' + desc + '</div>';
+    } else if (!nemonic) {
+      h += '<div class="card-desc">' + raw + '</div>';
+    }
+    h += '</div>';
+  }
+
+  h += '<div class="card-foot">';
+  h += '<span class="card-foot-file">' + r.file.replace('.pdf','') + '</span>';
+  if (realPage) { h += '<span>עמוד ' + realPage + '</span>'; }
+  h += '</div></div>';
+  return h;
+}
+
+/* ── DRAWINGS ─────────────────────────────────────────────── */
+function renderDrawings(query) {
+  var q = (query||'').toLowerCase().trim();
+  var list = PDF_LIST.filter(function(d){ return matchDoc(d,q); });
+  var byMfr = {};
+  list.forEach(function(d){
+    if (!byMfr[d.mfr]) { byMfr[d.mfr] = []; }
+    byMfr[d.mfr].push(d);
+  });
+  var html = '';
+  ['TKE','KONE','Schindler','Otis'].forEach(function(mfr){
+    if (!byMfr[mfr] || !byMfr[mfr].length) { return; }
+    html += '<div class="section-title">' + mfr + '</div>';
+    html += '<div class="pdf-list-block">' + byMfr[mfr].map(docRow).join('') + '</div>';
+  });
+  if (!html) {
+    html = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:.85rem">אין תוצאות לחיפוש זה</div>';
+  }
+  document.getElementById('draw-body').innerHTML = html;
+}
+
+function matchDoc(d,q) {
+  if (!q) { return true; }
+  var hay = (d.name + ' ' + (d.tags||[]).join(' ') + ' ' + d.mfr + ' ' + d.file).toLowerCase();
+  return hay.indexOf(q) !== -1;
+}
+
+function docRow(d) {
+  var cls = MFR_COLOR[d.mfr] || '';
+  return '<a class="pdf-row" href="./pdfs/' + d.file + '" target="_blank">' +
+    '<span class="pdf-dot ' + cls + '"></span>' +
+    '<span class="pdf-name">' + d.name + '</span>' +
+    '<span class="pdf-tag">' + d.mfr + '</span>' +
+    '<span class="pdf-arrow">↗</span></a>';
+}
+
+function filterDrawings() {
+  renderDrawings(document.getElementById('draw-inp').value);
+}
+
+/* ── QR SCAN ──────────────────────────────────────────────── */
+function buildQrList() {
+  document.getElementById('qr-list').innerHTML = QR_CODES.map(function(q){
+    var cls = MFR_COLOR[q.mfr] || '';
+    return '<div class="qr-item">' +
+      '<span class="pdf-dot ' + cls + '"></span>' +
+      '<span class="qr-mfr" style="color:var(--' + cls + ')">' + q.mfr + '</span>' +
+      '<span style="color:var(--text2);font-size:.78rem">' + q.ctrl + '</span>' +
+      '<span class="qr-code">' + q.code + '</span></div>';
+  }).join('');
+}
+
+function toggleScan() { if (scanActive) { stopScan(); } else { startScan(); } }
+
+function startScan() {
+  if (!('BarcodeDetector' in window)) {
+    document.getElementById('qr-camera-section').style.display = 'none';
+    document.getElementById('qr-no-api').style.display = 'block';
+    return;
+  }
+  var btn = document.getElementById('scan-btn');
+  var status = document.getElementById('scan-status');
+  var wrap = document.getElementById('camera-wrap');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(function(stream){
+      scanStream = stream;
+      var video = document.getElementById('qr-video');
+      video.srcObject = stream; video.play();
+      wrap.style.display = 'block'; scanActive = true;
+      btn.textContent = '⏹ עצור סריקה'; btn.classList.add('active');
+      status.textContent = '🔍 מחפש קוד QR...';
+      document.getElementById('scan-result').classList.remove('visible');
+      scanDetector = new BarcodeDetector({formats:['qr_code']});
+      scanLoop(video);
+    }).catch(function(err){ status.textContent = 'שגיאת מצלמה: ' + err.message; });
+}
+
+function scanLoop(video) {
+  if (!scanActive) { return; }
+  scanDetector.detect(video).then(function(codes){
+    if (codes.length > 0) { handleQrResult(codes[0].rawValue); return; }
+    scanRaf = requestAnimationFrame(function(){ scanLoop(video); });
+  }).catch(function(){ scanRaf = requestAnimationFrame(function(){ scanLoop(video); }); });
+}
+
+function handleQrResult(text) {
+  stopScan();
+  document.getElementById('scan-status').textContent = '';
+  document.getElementById('scan-result').classList.add('visible');
+  document.getElementById('scan-result-val').textContent = text;
+  var m = text.match(/^ELEV:([^:]+):(.+)$/i);
+  if (m) {
+    setTimeout(function(){ showTab('fault'); setMfr(m[1]); setCtrl(m[2]); }, 600);
+    return;
+  }
+  setTimeout(function(){
+    showTab('fault');
+    document.getElementById('inp').value = text;
+    doSearch();
+  }, 600);
+}
+
+function stopScan() {
+  scanActive = false;
+  if (scanRaf) { cancelAnimationFrame(scanRaf); scanRaf = null; }
+  if (scanStream) { scanStream.getTracks().forEach(function(t){ t.stop(); }); scanStream = null; }
+  var video = document.getElementById('qr-video');
+  if (video) { video.srcObject = null; }
+  document.getElementById('camera-wrap').style.display = 'none';
+  var btn = document.getElementById('scan-btn');
+  if (btn) { btn.textContent = '📷 פתח מצלמה'; btn.classList.remove('active'); }
+  var status = document.getElementById('scan-status');
+  if (status && !status.textContent) { status.textContent = 'הסריקה הופסקה'; }
+}
+
+/* ── SERVICE WORKER ───────────────────────────────────────── */
+function registerSW() {
+  if (!('serviceWorker' in navigator)) { return; }
+  var refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if (!refreshing) { refreshing = true; window.location.reload(); }
+  });
+  navigator.serviceWorker.register('./sw.js').then(function(reg){
+    if (reg.waiting) { reg.waiting.postMessage({type:'SKIP_WAITING'}); }
+    reg.addEventListener('updatefound', function(){
+      var sw = reg.installing;
+      if (!sw) { return; }
+      sw.addEventListener('statechange', function(){
+        if (sw.state==='installed' && navigator.serviceWorker.controller) {
+          sw.postMessage({type:'SKIP_WAITING'});
+        }
+      });
+    });
+  }).catch(function(){});
+}
+
+/* ── INIT ─────────────────────────────────────────────────── */
+window.addEventListener('load', function(){
+  buildQrList();
+  showEmpty();
+  registerSW();
+  if (!('BarcodeDetector' in window)) {
+    document.getElementById('qr-camera-section').style.display = 'none';
+    document.getElementById('qr-no-api').style.display = 'block';
+  }
+  var pill = document.getElementById('pill');
+  loadFaultIndex().then(function(){
+    pill.textContent = FAULTS.length + ' קודים';
+    pill.classList.add('ready');
+  }).catch(function(){
+    pill.textContent = 'שגיאה';
+    pill.style.color = 'var(--red)';
+  });
+});
+</script>
+</body>
+</html>
