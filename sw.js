@@ -8,8 +8,8 @@
  * To enable auth in future: add auth check here before context.next()
  */
 
-var CACHE_CORE = 'elevator-core-v8';
-var CACHE_PDF  = 'elevator-docs-v8';
+var CACHE_CORE = 'elevator-core-v9';
+var CACHE_PDF  = 'elevator-docs-v9';
 
 var PRECACHE = [
   './',
@@ -18,6 +18,9 @@ var PRECACHE = [
   './data/fault_index.json',
   './data/mrl_index.json',
   './manifest.json',
+  './apple-touch-icon.png',
+  './icon-192.png',
+  './icon-512.png',
 ];
 
 /* ── Install: cache all core files ── */

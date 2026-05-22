@@ -2,9 +2,37 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Elevator Field Console</title>
+
+  <!-- PWA Manifest -->
   <link rel="manifest" href="./manifest.json">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Elevator">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0B0F1A">
+
+  <!-- iOS Icons -->
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="./apple-touch-icon-120.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="./apple-touch-icon-152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="./apple-touch-icon-167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-180.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon.png">
+
+  <!-- iOS Splash Screens -->
+  <link rel="apple-touch-startup-image" media="(device-width:390px) and (device-height:844px) and (-webkit-device-pixel-ratio:3)" href="./splash-1170x2532.png">
+  <link rel="apple-touch-startup-image" media="(device-width:393px) and (device-height:852px) and (-webkit-device-pixel-ratio:3)" href="./splash-1179x2556.png">
+  <link rel="apple-touch-startup-image" media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2)" href="./splash-750x1334.png">
+  <link rel="apple-touch-startup-image" media="(device-width:375px) and (device-height:812px) and (-webkit-device-pixel-ratio:3)" href="./splash-1125x2436.png">
+  <link rel="apple-touch-startup-image" media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:2)" href="./splash-828x1792.png">
+  <link rel="apple-touch-startup-image" media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:3)" href="./splash-1242x2688.png">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     :root {
@@ -1411,6 +1439,16 @@
 
 <div id="offline-bar">⚠ ללא חיבור — מצב לא מקוון</div>
 
+<!-- iOS Install Banner -->
+<div id="ios-install-bar" style="display:none;flex-shrink:0;background:#0F172A;border-bottom:1px solid rgba(59,130,246,.3);padding:10px 14px;align-items:center;gap:10px">
+  <span style="font-size:22px;line-height:1">⚡</span>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:12px;font-weight:800;color:#E2E8F0">התקן כאפליקציה</div>
+    <div style="font-size:11px;color:#7A91A8;margin-top:2px">Safari → <span style="font-size:13px">⎋</span> שתף → "הוסף למסך הבית"</div>
+  </div>
+  <button onclick="document.getElementById('ios-install-bar').style.display='none';localStorage.setItem('iosBarDismissed','1')" style="background:none;border:none;color:#7A91A8;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</button>
+</div>
+
 <!-- Search hero (always visible) -->
 <div class="search-hero">
   <div class="search-hero-lbl">⚡ אבחון תקלה</div>
@@ -2555,10 +2593,20 @@ function doAiAnalyze() {
   });
 }
 
+/* ── iOS INSTALL BANNER ── */
+function checkIosInstall(){
+  var isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone=window.navigator.standalone===true;
+  var dismissed=localStorage.getItem('iosBarDismissed');
+  if(isIos && !isStandalone && !dismissed){
+    document.getElementById('ios-install-bar').style.display='flex';
+  }
+}
+
 /* ── BOOT ── */
 window.addEventListener('load',function(){
   updNet();window.addEventListener('online',updNet);window.addEventListener('offline',updNet);
-  buildQrList();registerSW();
+  buildQrList();registerSW();checkIosInstall();
   if(!('BarcodeDetector' in window)){document.getElementById('qr-cam-sec').style.display='none';document.getElementById('qr-no-api').style.display='block';}
   initAuth(function(){
     loadFaultIndex().then(function(){
