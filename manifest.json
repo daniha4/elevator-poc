@@ -1,7 +1,7 @@
 {
-  "name": "Elevator Fault Finder",
-  "short_name": "ElevatorFault",
-  "description": "חיפוש קודי תקלות מעליות — TKE, KONE, Schindler",
+  "name": "Elevator Field Console",
+  "short_name": "Elevator",
+  "description": "כלי שטח — חיפוש קודי תקלות מעליות אופליין",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",

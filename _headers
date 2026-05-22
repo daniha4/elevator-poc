@@ -1,0 +1,14 @@
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/fault-index.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/data/*
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/pdfs/*
+  Cache-Control: public, max-age=604800

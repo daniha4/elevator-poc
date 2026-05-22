@@ -242,7 +242,7 @@ def parse_kone_lce(pdf_path):
     return recs
 
 # ══════════════════════════════════════════════════════════════
-# 5. KONE KDL16
+# 5. KONE KDL16  (Main code + Sub code format)
 # ══════════════════════════════════════════════════════════════
 def parse_kdl16(pdf_path):
     recs = []
@@ -250,32 +250,94 @@ def parse_kdl16(pdf_path):
         doc = fitz.open(pdf_path)
     except:
         print(f"  SKIP: {pdf_path}"); return recs
-    CODE_RE = re.compile(r'^(\d{3}-\d{4})$|^(\d{6})$')
+    full = ''
+    for p in doc: full += p.get_text() + '\n'
+    lines = [l.strip() for l in full.splitlines() if l.strip()]
+    MAIN_RE = re.compile(r'^(\d{3})\s+(.+)$')
+    SUB_RE  = re.compile(r'^(\d{4})\s+(.+)$')
+    BARE_MAIN = re.compile(r'^(\d{3})$')
     seen = set()
-    for page in doc:
-        lines = [l.strip() for l in page.get_text().splitlines() if l.strip()]
-        i=0
-        while i<len(lines):
-            m=CODE_RE.match(lines[i])
-            if m:
-                code = lines[i]
-                if code in seen: i+=1; continue
-                seen.add(code)
-                desc=''
-                if i+1<len(lines) and len(lines[i+1])>3: desc=clean(lines[i+1])
-                if i+2<len(lines) and len(lines[i+2])>3 and len(desc)<30:
-                    desc += ' — ' + clean(lines[i+2])
-                snippet = 'Code {} | {}'.format(code, desc) if desc else 'Code {}'.format(code)
+    cur_main = ''
+    cur_main_name = ''
+    i = 0
+    while i < len(lines):
+        l = lines[i]
+        mm = MAIN_RE.match(l)
+        bm = BARE_MAIN.match(l)
+        ms = SUB_RE.match(l)
+        if mm and not ms:
+            cur_main = mm.group(1)
+            cur_main_name = mm.group(2).strip()
+        elif bm:
+            cur_main = bm.group(1)
+        elif ms:
+            sub = ms.group(1); sub_name = ms.group(2).strip()
+            key = '{}-{}'.format(cur_main, sub)
+            if key not in seen and cur_main:
+                seen.add(key)
+                desc = ''
+                if i+1 < len(lines) and len(lines[i+1]) > 5 and not SUB_RE.match(lines[i+1]) and not BARE_MAIN.match(lines[i+1]):
+                    desc = clean(lines[i+1], 100)
+                parts = ['Code {}-{}'.format(cur_main, sub), sub_name]
+                if cur_main_name and cur_main_name not in sub_name: parts.insert(1, cur_main_name)
+                if desc: parts.append(desc)
                 recs.append({
-                    'file': 'KONE_KDL16_Faults.pdf',
-                    'page': str(8000+len(recs)),
-                    'snippet': snippet,
+                    'file': 'KONE_KDL16_FaultCodes.pdf',
+                    'page': str(8000 + len(recs)),
+                    'snippet': ' | '.join(parts),
                     'keyword': 'fault', 'has_code': 'true',
                     'normalized_manufacturer': 'KONE',
                     'normalized_controller': 'KDL16',
                 })
-            i+=1
+        i += 1
     print(f"  KDL16: {len(recs)} קודים")
+    return recs
+
+
+# ══════════════════════════════════════════════════════════════
+# 5b. TKE TAC50K / Evolution 2 (English)
+# ══════════════════════════════════════════════════════════════
+def parse_tac50k(pdf_paths):
+    recs = []
+    seen = set()
+    SKIP = re.compile(r'^(©|TAC|ThyssenKrupp|Car Error|Codes|CODE|DEFINITION|THYSSENKRUPP|Page \d|y$)', re.IGNORECASE)
+    CODE_RE = re.compile(r'^(\d{1,4})$')
+    for pdf_path in pdf_paths:
+        try:
+            doc = fitz.open(pdf_path)
+        except:
+            print(f"  SKIP: {pdf_path}"); continue
+        full = ''
+        for p in doc: full += p.get_text() + '\n'
+        lines = [l.strip() for l in full.splitlines() if l.strip()]
+        i = 0
+        while i < len(lines):
+            m = CODE_RE.match(lines[i])
+            if m and not SKIP.match(lines[i]):
+                code = m.group(1)
+                key = 'TAC50K-' + code
+                if key not in seen:
+                    seen.add(key)
+                    desc = ''
+                    j = i + 1
+                    while j < min(i+3, len(lines)):
+                        nl = lines[j]
+                        if CODE_RE.match(nl) or SKIP.match(nl): break
+                        if len(nl) > 8 and not desc:
+                            desc = clean(nl, 120)
+                        j += 1
+                    if desc:
+                        recs.append({
+                            'file': 'TKE_TAC50K_Codes2.pdf',
+                            'page': str(2000 + int(code)),
+                            'snippet': 'Code {} | {}'.format(code, desc),
+                            'keyword': 'fault', 'has_code': 'true',
+                            'normalized_manufacturer': 'TKE',
+                            'normalized_controller': 'TAC50K',
+                        })
+            i += 1
+    recs.sort(key=lambda r: int(r['page']))
+    print(f"  TAC50K: {len(recs)} קודים")
     return recs
 
 # ══════════════════════════════════════════════════════════════
@@ -426,9 +488,11 @@ PDF_PATHS = {
     'CMC3':        os.path.join(pdfs_base, 'CMC3_FaultCodes_IRC34.pdf'),
     'KCE':         os.path.join(pdfs_base, 'KONE_KCE_fault_codes.pdf'),
     'LCE':         os.path.join(pdfs_base, 'KONE_MRL_FaultCodes.pdf'),
-    'KDL16':       os.path.join(pdfs_base, 'KONE_KDL16_Faults.pdf'),
+    'KDL16':       os.path.join(pdfs_base, 'KONE_KDL16_FaultCodes.pdf'),
     '3300':        os.path.join(pdfs_base, 'Schindler_3300_Training.pdf'),
-    '5500':        r"C:\Users\danih\Documents\יומן שגיאות S5500.pdf",
+    '5500':        os.path.join(pdfs_base, 'Schindler_5500_יומן_שגיאות.pdf'),
+    'TAC50K_1':    os.path.join(pdfs_base, 'TKE_Evolution2_Codes1.pdf'),
+    'TAC50K_2':    os.path.join(pdfs_base, 'TKE_TAC50K_Codes2.pdf'),
 }
 
 print("=== בונה fault_index.json ===\n")
@@ -440,6 +504,7 @@ records += parse_kone_lce(PDF_PATHS['LCE'])
 records += parse_kdl16(PDF_PATHS['KDL16'])
 records += parse_schindler_3300(PDF_PATHS['3300'])
 records += parse_schindler_5500(PDF_PATHS['5500'])
+records += parse_tac50k([PDF_PATHS['TAC50K_1'], PDF_PATHS['TAC50K_2']])
 
 print(f"\nסה\"כ לפני ניקוי: {len(records)}")
 

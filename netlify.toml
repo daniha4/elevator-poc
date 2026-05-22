@@ -1,0 +1,33 @@
+# ─── AUTH (DISABLED during development) ──────────────────────
+# To enable full protection: uncomment the block below and redeploy.
+# Requires env vars: SITE_PASSWORD, SESSION_TOKEN (set via Netlify dashboard).
+#
+# [[edge_functions]]
+#   path = "/*"
+#   function = "auth"
+# ──────────────────────────────────────────────────────────────
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/fault-index.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/pdfs/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

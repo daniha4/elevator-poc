@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "elevator-poc-recovered",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "8322", "-s", "."],
+      "port": 8322
+    }
+  ]
+}
