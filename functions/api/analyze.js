@@ -188,7 +188,10 @@ function parseAvailableDocs(raw) {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
   if (typeof raw === 'string') {
-    try { return JSON.parse(raw); } catch { return [{ file: raw }]; }
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [{ file: raw }];
+    } catch { return [{ file: raw }]; }
   }
   return [];
 }

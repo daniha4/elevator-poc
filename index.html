@@ -2646,7 +2646,7 @@ function aiSrcLabel(src) {
 function renderAiResult(d, slot) {
   var lvl   = (d.safety&&d.safety.level||'NORMAL').toLowerCase();
   var lbl   = d.safety&&d.safety.label  || '🟢 רגיל';
-  var acts  = (d.safety&&d.safety.required_before_work||[]).join(' | ')||'';
+  var acts  = ((d.safety&&d.safety.required_before_work)||[]).join(' | ')||'';
   var src   = d.meaning_source||'inferred';
   var h = '<div style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--acc);margin-bottom:10px">✦ ניתוח AI — Claude Sonnet</div>';
 
@@ -2778,7 +2778,7 @@ function doAiAnalyze() {
     body: JSON.stringify({mfr:mfr, ctrl:ctrl, code:code, symptom:symp,
       localSnippet:localSnippet,
       availableDocs:DOCS.filter(function(d){return !mfr||d.mfr===mfr;}).map(function(d){
-        return {file:d.name, page:d.page||null, type:d.kind||'document'};
+        return {file:d.file||d.url||d.name, page:d.page||null, type:d.kind||'document'};
       })})
   })
   .then(function(r){ return r.json(); })
