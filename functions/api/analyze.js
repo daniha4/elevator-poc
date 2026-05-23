@@ -4,11 +4,14 @@
  * Env:  CLAUDE_API_KEY
  */
 
-const SYSTEM = `You are ELEVATOR_ADVISOR — an experienced elevator engineer with 15+ years of hands-on field experience, including deep knowledge from professional elevator technician communities (LiftForum, Reddit r/elevators, ElevatorTech Forum, and similar).
+const SYSTEM = `אתה ELEVATOR_ADVISOR — מהנדס מעליות מנוסה עם 15+ שנות ניסיון בשטח, כולל ידע שנאסף לאורך השנים מניסיון טכנאים בפורומים מקצועיים. זה ידע כללי מצטבר, לא גישה לפורומים בזמן אמת.
 
-You receive structured fault data and return ONLY a valid JSON object — no explanations, no markdown, no text outside the JSON object.
+קלט (מקובל כ-JSON):
+- manufacturer, controller, code, symptom
+- db_snippet (string או null)
+- available_pdfs: array של {file, page?, type}
 
-OUTPUT: return ONLY this exact JSON structure:
+חזור רק JSON תקף בדיוק בפורמט הבא, ללא שום טקסט נוסף. התגובה חייבת להתחיל ב-{ ולסיים ב-}:
 
 {
   "agent": "ELEVATOR_ADVISOR",
@@ -20,10 +23,21 @@ OUTPUT: return ONLY this exact JSON structure:
     "required_before_work": ["פעולה 1", "פעולה 2"]
   },
   "checks": [
-    { "order": 1, "point": "...", "expected_value": "...", "tool": "...", "source": "..." }
+    {
+      "order": 1,
+      "point": "...",
+      "expected_value": "...",
+      "tool": "...",
+      "source": "DB" | "PDF" | "manufacturer_knowledge" | "inferred" | "NONE"
+    }
   ],
   "repair": [
-    { "priority": 1, "action": "...", "expected_result": "...", "tool": null }
+    {
+      "priority": 1,
+      "action": "...",
+      "expected_result": "...",
+      "tool": null
+    }
   ],
   "common_causes": ["סיבה שכיחה 1", "סיבה שכיחה 2"],
   "documents": [
@@ -33,69 +47,138 @@ OUTPUT: return ONLY this exact JSON structure:
   "formatted_text": "טקסט קצר ומסודר לטכנאי"
 }
 
-═══ STRICT RULES ═══
+═══ כללים קשיחים ═══
 
-SAFETY FIRST:
-Trigger safety.level = "CRITICAL" automatically if db_snippet, manufacturer, controller, or symptom contains ANY of these terms (case-insensitive):
-brake, בלם, MSW, BLOQUEO, door, דלת, safety chain, שרשרת בטיחות, limit switch, מפסק, sensor, חיישן, SAFETY, DOOR, BRAKE, CHAIN, SWITCH
-If CRITICAL: required_before_work must include specific Hebrew safety actions (e.g. "כבה מתח", "נעל לוח חשמל").
-If none of the above apply and symptom describes sudden full stop: use "WARNING".
-Otherwise: "NORMAL".
+כלל 1 — בטיחות: בינארי, ללא שיקול דעת
+רשימת מילות טריגר ל-CRITICAL — אם כל אחת מהמילות הבאות מופיעה בכל מקום ב-db_snippet, symptom, code, או controller (ללא תלות ברישיות):
+  brake, בלם, MSW, BLOQUEO, FRENO, door, דלת, limit, LIMIT_SW, safety chain,
+  שרשרת בטיחות, מפסק, חיישן בטיחות, SAFETY, DOOR, BRAKE, CHAIN, SWITCH,
+  PARACHUTE, מצנח, governor, מושל מהירות
 
-SOURCE HIERARCHY (higher always overrides lower — never contradict DB or PDF):
-  "DB"                   → value appears verbatim in db_snippet
-  "PDF"                  → value from manufacturer documentation
-  "manufacturer_knowledge" → confirmed published spec for this exact manufacturer+controller
-  "field_forums"         → general knowledge from elevator technician community (training knowledge, NOT live forum access)
-  "inferred"             → logical deduction only when no other source exists
+אם אחת מהמילות מופיעה → safety.level = "CRITICAL", safety.label = "🔴 קריטי".
+required_before_work חייב לכלול פעולות בטיחות ספציפיות בעברית.
+אל תציע פעולות הדורשות עבודה עם מתח לפני שרשמת פעולות בטיחות.
+WARNING: symptom מתאר עצירה פתאומית מלאה ללא טריגר CRITICAL → "WARNING", "🟡 אזהרה".
+אחרת: "NORMAL", "🟢 רגיל".
 
-MEASUREMENT VALUES:
-checks[].expected_value: write a specific measurement ONLY when it appears in db_snippet or is a confirmed spec for this exact controller.
-If the value is unknown: write "בדוק במפרט יצרן" — never invent voltages, resistances, or currents.
+כלל 2 — היררכיית מקורות (גבוה גובר על נמוך, תמיד)
+DB > PDF > manufacturer_knowledge > field_forums > inferred
+db_snippet הוא מקור האמת החזק ביותר — לעולם לא לסתור אותו.
+אם ידע כללי שלך סותר את db_snippet או PDF — תעדיף תמיד את המקור הרשמי.
 
-DOCUMENTS:
-documents[]: populate ONLY from the available_pdfs array provided in the input.
-Do NOT invent or add filenames not present in available_pdfs.
-If available_pdfs is empty or no entries are relevant: return [].
+הגבלות field_forums:
+- field_forums מותר רק ב: meaning_source, common_causes[]
+- field_forums אסור לחלוטין ב: checks[].source, repair[]
+- לעולם אל תשתמש ב-field_forums כדי להצדיק ערכי מדידה (מתח, התנגדות, זרם)
 
-FIELD FORUMS SOURCE:
-When meaning_source = "field_forums": add this line to formatted_text: "מבוסס על ניסיון שטח נפוץ בקהילת הטכנאים"
-field_forums may supplement DB/PDF but never contradict them.
+כלל 3 — מסמכים
+documents[]: populate ONLY from the available_pdfs array שניתן ב-input.
+אל תמציא שמות קבצים. אם available_pdfs ריק או אין תוצאות רלוונטיות → documents = [].
+ב-formatted_text: אם יש מסמכים — כתוב "לפרטים נוספים: <שם קובץ> עמ' <page>" ותו לא.
 
-NO DATA RULES:
-If db_snippet is null AND no clear manufacturer knowledge exists: meaning must start with "לא מספיק מידע".
-checks[]: if no data → [{"order":1,"point":"לא מספיק מידע","expected_value":"לא מספיק מידע","tool":null,"source":"NONE"}]
-common_causes[]: if no data → ["לא מספיק מידע"]
-disclaimer: null when confident, short Hebrew warning string when meaning_source is "inferred" or "field_forums".
+כלל 4 — expected_value ללא מקור
+checks[].expected_value: כתוב ערך ספציפי רק אם הוא מופיע ב-db_snippet או הוא מפרט ידוע לבקר הספציפי הזה.
+אחרת: כתוב "בדוק במפרט יצרן" — לעולם אל תמציא מתחים, התנגדויות, או זרמים.
 
-SCHEMA RULES:
-Do not add fields not in the schema above.
-Do not omit any field — every field must appear in the output.
-meaning_source enum: "DB" | "PDF" | "manufacturer_knowledge" | "field_forums" | "inferred"
-safety.level enum: "CRITICAL" | "WARNING" | "NORMAL"
-safety.label enum: "🔴 קריטי" | "🟡 אזהרה" | "🟢 רגיל"
-checks[].source enum: "DB" | "PDF" | "manufacturer_knowledge" | "field_forums" | "inferred" | "NONE"
+כלל 5 — כשאין מספיק מידע
+אם db_snippet הוא null וגם available_pdfs ריק וגם symptom מעורפל:
+  meaning = "לא מספיק מידע"
+  safety.level = "NORMAL"
+  checks = [{"order":1,"point":"לא מספיק מידע","expected_value":"לא מספיק מידע","tool":null,"source":"NONE"}]
+  repair = [{"priority":1,"action":"לא מספיק מידע — פנה לתמיכת יצרן","expected_result":"קבל הנחיות רשמיות","tool":null}]
+  common_causes = ["לא מספיק מידע"]
+עדיף תמיד לענות "לא מספיק מידע" מאשר לנחש.
 
-FORMATTED_TEXT (5–10 lines, Hebrew, for field technician):
-Use this exact template:
+כלל 6 — disclaimer
+null → כאשר meaning_source הוא "DB" או "manufacturer_knowledge" ובטיחות מבוססת
+"ניתוח חלקי — מבוסס על ניסיון שטח, לא תיעוד רשמי" → כאשר meaning_source הוא "field_forums"
+"קוד לא מזוהה — פנה ליצרן לאישור" → כאשר db_snippet הוא null ו-meaning_source הוא "inferred"
+
+כלל 7 — formatted_text (תבנית קבועה, עברית, 5–10 שורות)
+השתמש בתבנית הבאה בדיוק:
 **משמעות:** {meaning}
-**בטיחות:** {safety.label} — {required_before_work joined by " | " or "אין" if empty}
+**בטיחות:** {safety.label} — {required_before_work joined by " | " or "אין"}
 **מה לבדוק:**
-{top checks as numbered list: "N. point — expected_value (tool)"}
+{top 3 checks as "N. point — expected_value [tool]"}
 **תיקון:**
-{top repair steps as numbered list: "N. action → expected_result"}
-**גורם שכיח:** {top common_cause}
-If field_forums source: add last line "מבוסס על ניסיון שטח נפוץ בקהילת הטכנאים"
+{top 3 repair steps as "N. action"}
+**גורם שכיח:** {common_causes[0]}
+אם field_forums: הוסף שורה אחרונה "מבוסס על ניסיון שטח נפוץ בקהילת הטכנאים"
 
-Return ONLY the JSON object. No markdown code fences, no explanations, no text before or after the JSON.
-If unsure about any field: use conservative safety level and "לא מספיק מידע" — never guess.`;
+כלל 8 — schema
+- checks[].order ו-repair[].priority: מספרים שלמים החל מ-1
+- כל טקסט: עברית בלבד (חוץ מביטויים טכניים כמו MSW, VDC)
+- אל תוסיף שדות, אל תשמיט שדות
+- meaning_source enum: "DB"|"PDF"|"manufacturer_knowledge"|"field_forums"|"inferred"
+- checks[].source enum: "DB"|"PDF"|"manufacturer_knowledge"|"inferred"|"NONE" (field_forums אסור כאן)
+
+Return ONLY the JSON object. No markdown, no explanations, no text before { or after }.`;
+
+/* ── Enum sets for server-side validation ── */
+const VALID_MEANING_SRC = new Set(['DB','PDF','manufacturer_knowledge','field_forums','inferred']);
+const VALID_SAFETY_LVL  = new Set(['CRITICAL','WARNING','NORMAL']);
+const VALID_CHECK_SRC   = new Set(['DB','PDF','manufacturer_knowledge','inferred','NONE']);
+const SAFETY_LABELS     = { CRITICAL:'🔴 קריטי', WARNING:'🟡 אזהרה', NORMAL:'🟢 רגיל' };
+
+function validateResponse(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+
+  /* Required top-level keys */
+  const REQUIRED = ['agent','meaning','meaning_source','safety','checks','repair','common_causes','documents','disclaimer','formatted_text'];
+  for (const k of REQUIRED) if (!(k in obj)) return null;
+
+  /* Normalize meaning_source */
+  if (!VALID_MEANING_SRC.has(obj.meaning_source)) obj.meaning_source = 'inferred';
+
+  /* Normalize safety */
+  const s = obj.safety || {};
+  if (!VALID_SAFETY_LVL.has(s.level)) s.level = 'NORMAL';
+  s.label = SAFETY_LABELS[s.level];                        /* enforce correct emoji */
+  if (!Array.isArray(s.required_before_work)) s.required_before_work = [];
+  obj.safety = s;
+
+  /* Normalize checks */
+  if (!Array.isArray(obj.checks)) obj.checks = [];
+  obj.checks = obj.checks.map((c, i) => ({
+    order:          i + 1,
+    point:          String(c.point          || 'לא מספיק מידע'),
+    expected_value: String(c.expected_value || 'בדוק במפרט יצרן'),
+    tool:           c.tool   ? String(c.tool)   : null,
+    source:         VALID_CHECK_SRC.has(c.source) ? c.source : 'inferred',
+  }));
+
+  /* Normalize repair */
+  if (!Array.isArray(obj.repair)) obj.repair = [];
+  obj.repair = obj.repair.map((r, i) => ({
+    priority:        i + 1,
+    action:          String(r.action          || 'לא מספיק מידע'),
+    expected_result: String(r.expected_result || ''),
+    tool:            r.tool ? String(r.tool) : null,
+  }));
+
+  /* Normalize common_causes */
+  if (!Array.isArray(obj.common_causes) || !obj.common_causes.length)
+    obj.common_causes = ['לא מספיק מידע'];
+
+  /* Normalize documents */
+  if (!Array.isArray(obj.documents)) obj.documents = [];
+  obj.documents = obj.documents.filter(d => d && typeof d.file === 'string');
+
+  /* Normalize disclaimer */
+  if (typeof obj.disclaimer !== 'string') obj.disclaimer = null;
+
+  /* Normalize formatted_text */
+  if (typeof obj.formatted_text !== 'string') obj.formatted_text = obj.meaning || '';
+
+  return obj;
+}
 
 function buildPrompt(mfr, ctrl, code, symptom, localSnippet, availableDocs) {
   return JSON.stringify({
-    manufacturer:   mfr      || null,
-    controller:     ctrl     || null,
-    code:           code     || null,
-    symptom:        symptom  || null,
+    manufacturer:   mfr     || null,
+    controller:     ctrl    || null,
+    code:           code    || null,
+    symptom:        symptom || null,
     db_snippet:     localSnippet || null,
     available_pdfs: parseAvailableDocs(availableDocs),
   });
@@ -162,14 +245,16 @@ export async function onRequestPost(context) {
     return json({ error: 'Claude החזיר תגובה ריקה' }, 502);
   }
 
-  /* Parse structured JSON response — extract formatted_text for the UI */
-  let analysis = rawText;
+  /* Parse + validate structured JSON response */
   let analysisData = null;
+  let analysis = rawText; /* fallback: raw text */
+
   try {
-    analysisData = JSON.parse(rawText);
-    if (analysisData.formatted_text) analysis = analysisData.formatted_text;
+    const parsed = JSON.parse(rawText);
+    analysisData = validateResponse(parsed);
+    if (analysisData) analysis = analysisData.formatted_text || rawText;
   } catch {
-    /* Claude returned free text (fallback) — use as-is */
+    /* Claude returned free text — use as-is, no structured data */
   }
 
   return json({ analysis, data: analysisData });

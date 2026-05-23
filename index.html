@@ -588,11 +588,42 @@
       font-size: 9px; font-weight: 900; text-transform: uppercase;
       letter-spacing: 1px; color: var(--acc); margin-bottom: 8px;
     }
-    .ai-analysis { font-size:14px; line-height:1.75; color:var(--txt1); padding:4px 0; }
-    .ai-analysis p { margin:0 0 10px; }
-    .ai-analysis strong { color:var(--txt1); font-weight:800; }
-    .ai-analysis ul { margin:4px 0 10px 0; padding-right:18px; }
-    .ai-analysis li { margin-bottom:4px; }
+    /* ── AI STRUCTURED RESULT ── */
+    .ai-card { background:var(--card2); border:1px solid var(--line2); border-radius:10px; padding:13px 14px; margin-bottom:10px; }
+    .ai-card-hdr { font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:1px; color:var(--acc); margin-bottom:8px; }
+    .ai-meaning-txt { font-size:14px; font-weight:600; color:var(--white); line-height:1.5; }
+    .ai-src { display:inline-block; font-size:9px; font-weight:800; letter-spacing:.4px; padding:2px 7px; border-radius:4px; margin-left:7px; vertical-align:middle; }
+    .ai-src.db  { background:rgba(34,197,94,.15);  color:#4ADE80; }
+    .ai-src.mfr { background:rgba(245,158,11,.15); color:var(--orange); }
+    .ai-src.frm { background:rgba(139,92,246,.15); color:#A78BFA; }
+    .ai-src.inf { background:rgba(122,145,168,.12); color:var(--txt2); }
+    .ai-safety-badge { border-radius:9px; padding:11px 14px; margin-bottom:10px; }
+    .ai-safety-badge.critical { background:rgba(239,68,68,.10); border:1px solid rgba(239,68,68,.28); color:#FCA5A5; }
+    .ai-safety-badge.warning  { background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.28); color:#FCD34D; }
+    .ai-safety-badge.normal   { background:rgba(34,197,94,.08);  border:1px solid rgba(34,197,94,.20);  color:#4ADE80; }
+    .ai-safety-lbl  { font-size:14px; font-weight:800; }
+    .ai-safety-acts { font-size:12px; margin-top:5px; opacity:.85; line-height:1.5; }
+    .ai-check-row { display:flex; gap:9px; padding:8px 0; border-bottom:1px solid var(--line); }
+    .ai-check-row:last-child { border-bottom:none; padding-bottom:0; }
+    .ai-check-num { font-size:11px; font-weight:900; color:var(--acc); width:16px; flex-shrink:0; padding-top:2px; }
+    .ai-check-body { flex:1; min-width:0; }
+    .ai-check-point { font-size:13px; font-weight:600; color:var(--white); }
+    .ai-check-val  { font-size:12px; color:var(--txt2); margin-top:2px; }
+    .ai-check-tool { font-size:11px; color:var(--txt3); margin-top:1px; }
+    .ai-repair-row { display:flex; gap:9px; padding:8px 0; border-bottom:1px solid var(--line); align-items:flex-start; }
+    .ai-repair-row:last-child { border-bottom:none; padding-bottom:0; }
+    .ai-repair-num { width:20px; height:20px; border-radius:50%; background:var(--acc); color:var(--white); font-size:11px; font-weight:900; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+    .ai-repair-body { flex:1; min-width:0; }
+    .ai-repair-act  { font-size:13px; font-weight:600; color:var(--white); }
+    .ai-repair-res  { font-size:12px; color:var(--txt2); margin-top:2px; }
+    .ai-repair-tool { font-size:11px; color:var(--txt3); margin-top:1px; }
+    .ai-cause-row { display:flex; gap:7px; align-items:flex-start; font-size:13px; color:var(--txt2); padding:3px 0; line-height:1.5; }
+    .ai-cause-dot { color:var(--acc); flex-shrink:0; margin-top:1px; }
+    .ai-doc-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:12px; }
+    .ai-doc-row:last-child { border-bottom:none; }
+    .ai-doc-name { font-weight:600; color:var(--txt); flex:1; }
+    .ai-doc-pg   { color:var(--acc); font-weight:700; font-size:11px; flex-shrink:0; }
+    .ai-disclaimer { font-size:11px; color:var(--orange); padding:8px 10px; background:rgba(245,158,11,.07); border:1px solid rgba(245,158,11,.2); border-radius:7px; margin-top:4px; }
     .ai-section-hdr { font-size:12px; font-weight:900; color:var(--acc); text-transform:uppercase; letter-spacing:.6px; margin:14px 0 6px; }
     .adv-no-data {
       background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2);
@@ -2605,15 +2636,100 @@ function searchAdvisorLocal() {
 }
 
 /* ── AI ANALYZE ── */
+function aiSrcClass(src) {
+  return {DB:'db',PDF:'db',manufacturer_knowledge:'mfr',field_forums:'frm',inferred:'inf',NONE:'inf'}[src]||'inf';
+}
+function aiSrcLabel(src) {
+  return {DB:'DB',PDF:'PDF',manufacturer_knowledge:'יצרן',field_forums:'פורומים',inferred:'הסקה',NONE:'—'}[src]||src;
+}
+
+function renderAiResult(d, slot) {
+  var lvl   = (d.safety&&d.safety.level||'NORMAL').toLowerCase();
+  var lbl   = d.safety&&d.safety.label  || '🟢 רגיל';
+  var acts  = (d.safety&&d.safety.required_before_work||[]).join(' | ')||'';
+  var src   = d.meaning_source||'inferred';
+  var h = '<div style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--acc);margin-bottom:10px">✦ ניתוח AI — Claude Sonnet</div>';
+
+  /* Safety badge */
+  h += '<div class="ai-safety-badge '+lvl+'">';
+  h += '<div class="ai-safety-lbl">'+lbl+'</div>';
+  if (acts) h += '<div class="ai-safety-acts">⚠ '+esc(acts)+'</div>';
+  h += '</div>';
+
+  /* Meaning */
+  h += '<div class="ai-card">';
+  h += '<div class="ai-card-hdr">משמעות <span class="ai-src '+aiSrcClass(src)+'">'+aiSrcLabel(src)+'</span></div>';
+  h += '<div class="ai-meaning-txt">'+esc(d.meaning||'לא מספיק מידע')+'</div>';
+  h += '</div>';
+
+  /* Checks */
+  if (d.checks&&d.checks.length&&d.checks[0].source!=='NONE') {
+    h += '<div class="ai-card">';
+    h += '<div class="ai-card-hdr">🔍 מה לבדוק</div>';
+    d.checks.forEach(function(c){
+      h += '<div class="ai-check-row">';
+      h += '<div class="ai-check-num">'+c.order+'</div>';
+      h += '<div class="ai-check-body">';
+      h += '<div class="ai-check-point">'+esc(c.point)+'<span class="ai-src '+aiSrcClass(c.source)+'" style="margin-top:0">'+aiSrcLabel(c.source)+'</span></div>';
+      if (c.expected_value) h += '<div class="ai-check-val">→ '+esc(c.expected_value)+'</div>';
+      if (c.tool)           h += '<div class="ai-check-tool">🔧 '+esc(c.tool)+'</div>';
+      h += '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  /* Repair */
+  if (d.repair&&d.repair.length) {
+    h += '<div class="ai-card">';
+    h += '<div class="ai-card-hdr">🔧 תיקון — לפי סדר</div>';
+    d.repair.forEach(function(r){
+      h += '<div class="ai-repair-row">';
+      h += '<div class="ai-repair-num">'+r.priority+'</div>';
+      h += '<div class="ai-repair-body">';
+      h += '<div class="ai-repair-act">'+esc(r.action)+'</div>';
+      if (r.expected_result) h += '<div class="ai-repair-res">→ '+esc(r.expected_result)+'</div>';
+      if (r.tool)            h += '<div class="ai-repair-tool">🔧 '+esc(r.tool)+'</div>';
+      h += '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  /* Common causes */
+  if (d.common_causes&&d.common_causes.length&&d.common_causes[0]!=='לא מספיק מידע') {
+    h += '<div class="ai-card">';
+    h += '<div class="ai-card-hdr">📊 גורמים שכיחים</div>';
+    d.common_causes.forEach(function(c){
+      h += '<div class="ai-cause-row"><span class="ai-cause-dot">•</span><span>'+esc(c)+'</span></div>';
+    });
+    h += '</div>';
+  }
+
+  /* Documents */
+  if (d.documents&&d.documents.length) {
+    h += '<div class="ai-card">';
+    h += '<div class="ai-card-hdr">📄 מסמכים</div>';
+    d.documents.forEach(function(doc){
+      h += '<div class="ai-doc-row"><span class="ai-doc-name">'+esc(doc.file)+'</span>';
+      if (doc.page!=null) h += '<span class="ai-doc-pg">עמ׳ '+doc.page+'</span>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  /* Disclaimer */
+  if (d.disclaimer) h += '<div class="ai-disclaimer">ℹ '+esc(d.disclaimer)+'</div>';
+
+  slot.style.textAlign = 'right';
+  slot.innerHTML = h;
+  slot.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function formatAnalysis(text) {
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
-    .replace(/^(#{1,3} .+)$/gm, function(m,t){return '<div class="ai-section-hdr">'+t.replace(/^#+\s*/,'')+'</div>';})
-    .replace(/^- (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>(\n|$))+/g, function(m){return '<ul>'+m+'</ul>';})
-    .replace(/\n{2,}/g,'</p><p>')
-    .replace(/\n/g,'<br>');
+  /* Fallback: render free text (used when JSON parse fails) */
+  return '<div style="font-size:14px;line-height:1.75;color:var(--txt);padding:4px 0">'+
+    text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+        .replace(/\n/g,'<br>')+'</div>';
 }
 
 function doAiAnalyze() {
@@ -2661,7 +2777,9 @@ function doAiAnalyze() {
     credentials: 'same-origin',
     body: JSON.stringify({mfr:mfr, ctrl:ctrl, code:code, symptom:symp,
       localSnippet:localSnippet,
-      availableDocs:DOCS.filter(function(d){return !mfr||d.mfr===mfr;}).map(function(d){return d.name;}).join(', ')})
+      availableDocs:DOCS.filter(function(d){return !mfr||d.mfr===mfr;}).map(function(d){
+        return {file:d.name, page:d.page||null, type:d.kind||'document'};
+      })})
   })
   .then(function(r){ return r.json(); })
   .then(function(data) {
@@ -2669,11 +2787,13 @@ function doAiAnalyze() {
     var slot = document.getElementById('adv-ai-slot');
     if (!slot) return;
     if (data.error) {
-      slot.innerHTML = '<div style="color:var(--orange);font-size:12px">⚠ '+esc(data.error)+'</div>';
+      slot.innerHTML = '<div style="color:var(--orange);font-size:13px;padding:4px 0">⚠ '+esc(data.error)+'</div>';
+    } else if (data.data) {
+      renderAiResult(data.data, slot);     /* structured JSON — full rich display */
     } else {
       slot.style.textAlign = 'right';
-      slot.innerHTML = '<div style="font-size:10px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;color:var(--acc);margin-bottom:10px">✦ ניתוח AI — Claude Sonnet</div>'+
-        '<div class="ai-analysis">'+formatAnalysis(data.analysis)+'</div>';
+      slot.innerHTML = '<div style="font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--acc);margin-bottom:10px">✦ ניתוח AI — Claude Sonnet</div>'+
+        formatAnalysis(data.analysis||'');
       slot.scrollIntoView({behavior:'smooth',block:'start'});
     }
   })
