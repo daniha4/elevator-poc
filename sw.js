@@ -8,11 +8,11 @@
  * To enable auth in future: add auth check here before context.next()
  */
 
-var CACHE_CORE = 'elevator-core-v9';
-var CACHE_PDF  = 'elevator-docs-v9';
+var CACHE_CORE = 'elevator-core-v11';
+var CACHE_PDF  = 'elevator-docs-v11';
 
+/* Only lightweight core files — NO PDFs, NO MRL files, NO library */
 var PRECACHE = [
-  './',
   './index.html',
   './fault-index.js',
   './data/fault_index.json',
@@ -21,6 +21,12 @@ var PRECACHE = [
   './apple-touch-icon.png',
   './icon-192.png',
   './icon-512.png',
+];
+
+/* Files that must NEVER be auto-cached (too heavy / not needed offline) */
+var CACHE_BLOCK = [
+  'drive_index.json',
+  '/files/',
 ];
 
 /* ── Install: cache all core files ── */
@@ -102,8 +108,16 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
+  /* Block heavy data files from ever entering cache */
+  var isBlocked = CACHE_BLOCK.some(function(b) { return url.indexOf(b) !== -1; });
+  if (isBlocked) {
+    /* Network-only, no cache */
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (isCore || url.indexOf('/data/') !== -1) {
-    /* Core + data: network-first, cache fallback */
+    /* Core + allowed data: network-first, cache fallback */
     event.respondWith(
       fetch(event.request)
         .then(function(res) {

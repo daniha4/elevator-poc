@@ -77,9 +77,9 @@
       flex-shrink: 0;
       background: linear-gradient(160deg, #131E30 0%, #0E1827 100%);
       border-bottom: 1px solid var(--line);
-      padding: 0 16px;
+      padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px;
       display: flex; align-items: center; justify-content: space-between;
-      height: 56px;
+      min-height: calc(env(safe-area-inset-top, 0px) + 56px);
     }
     .hdr-left { display: flex; align-items: center; gap: 10px; }
     .hdr-icon { font-size: 22px; line-height: 1; }
@@ -754,8 +754,8 @@
     }
 
     .app-header {
-      height: 68px;
-      padding: 0 22px;
+      min-height: calc(env(safe-area-inset-top, 0px) + 68px);
+      padding: calc(env(safe-area-inset-top, 0px) + 12px) 22px 12px;
     }
     .hdr-title { font-size: 22px; line-height: 1.15; }
     .hdr-sub { font-size: 13px; color: var(--txt2); margin-top: 4px; }
@@ -1559,6 +1559,69 @@
   </div>
 
   <!-- ══ TAB: ספרייה ══ -->
+  <div class="tab" id="tab-lib">
+    <div class="tab-hdr">
+      <span class="tab-hdr-title">📚 ספרייה</span>
+      <span id="lib-count" style="font-size:11px;color:var(--txt2);margin-right:auto;padding-right:10px"></span>
+      <button id="lib-fav-btn" onclick="libToggleFavView()" style="background:none;border:none;font-size:18px;color:var(--txt3);cursor:pointer;padding:4px">★</button>
+    </div>
+    <div id="lib-local-warn" style="display:none;align-items:center;gap:8px;background:#1C1000;color:var(--orange);border-bottom:1px solid rgba(245,158,11,.2);font-size:11px;font-weight:700;padding:7px 14px;flex-shrink:0">
+      ⚠️ הספרייה זמינה ברשת המקומית בלבד
+    </div>
+    <div class="doc-search-wrap">
+      <input class="doc-search-inp" id="lib-inp" type="text"
+        placeholder="חיפוש בספרייה... שם קובץ, קטגוריה, יצרן" autocomplete="off"
+        oninput="renderLib(this.value)">
+    </div>
+    <div style="display:flex;gap:6px;padding:8px 12px 6px;overflow-x:auto;scrollbar-width:none;background:var(--surf);border-bottom:1px solid var(--line);flex-shrink:0" id="lib-cat-pills"></div>
+    <div class="doc-body" id="lib-body">
+      <div style="padding:48px;text-align:center;color:var(--txt2);font-size:14px">⏳ טוען ספרייה...</div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: יועץ AI ══ -->
+  <div class="tab" id="tab-adv">
+    <div class="adv-body" style="overflow-y:auto;flex:1;padding:14px 12px 24px">
+      <div class="adv-disclaimer">
+        <span class="adv-disc-ic">🤖</span>
+        <div class="adv-disc-txt">
+          <b>יועץ AI — Claude Haiku</b><br>
+          ניתוח תקלות בזמן אמת לפי נתוני היצרן. הכנס פרטי התקלה למטה.
+        </div>
+      </div>
+      <div class="adv-form" style="margin-top:14px">
+        <div class="adv-field">
+          <label class="adv-lbl">יצרן</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="mfr-pill tke adv-mfr-pill" data-mfr="TKE" onclick="advPickMfr('TKE')"><span class="mfr-dot" style="background:var(--tke)"></span>TKE</button>
+            <button class="mfr-pill kone adv-mfr-pill" data-mfr="KONE" onclick="advPickMfr('KONE')"><span class="mfr-dot" style="background:var(--kone)"></span>KONE</button>
+            <button class="mfr-pill sch adv-mfr-pill" data-mfr="Schindler" onclick="advPickMfr('Schindler')"><span class="mfr-dot" style="background:var(--sch)"></span>Schindler</button>
+            <button class="mfr-pill otis adv-mfr-pill" data-mfr="Otis" onclick="advPickMfr('Otis')"><span class="mfr-dot" style="background:var(--otis)"></span>Otis</button>
+          </div>
+        </div>
+        <div class="adv-field" id="adv-ctrl-wrap" style="display:none">
+          <label class="adv-lbl">בקר</label>
+          <div style="display:flex;gap:5px;flex-wrap:wrap" id="adv-ctrl-pills"></div>
+        </div>
+        <div class="adv-field">
+          <label class="adv-lbl">קוד תקלה</label>
+          <input class="adv-inp" id="adv-code" type="text" placeholder="לדוגמה: 273" autocomplete="off" dir="ltr">
+        </div>
+        <div class="adv-field">
+          <label class="adv-lbl">תסמין / תיאור</label>
+          <textarea class="adv-ta" id="adv-symp" placeholder="תאר את הבעיה: מה קורה, מתי, כמה זמן..."></textarea>
+        </div>
+        <button class="adv-btn" id="adv-ai-btn" onclick="doAiAnalyze()">
+          <span>🤖</span><span>ניתח עם AI</span>
+        </button>
+      </div>
+      <div class="adv-result" id="adv-result">
+        <div class="adv-res-hdr">תוצאת ניתוח AI</div>
+        <div id="adv-result-inner"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <nav class="bottom-nav">
@@ -1579,6 +1642,12 @@
   </button>
   <button class="nav-btn" id="nav-qr"    onclick="showTab('qr')">
     <span class="nav-ic">📷</span><span>QR</span>
+  </button>
+  <button class="nav-btn" id="nav-lib"   onclick="showTab('lib')">
+    <span class="nav-ic">📚</span><span>ספרייה</span>
+  </button>
+  <button class="nav-btn" id="nav-adv"   onclick="showTab('adv')">
+    <span class="nav-ic">🤖</span><span>יועץ</span>
   </button>
 </nav>
 
@@ -1912,10 +1981,11 @@ function buildFieldAdvice(r, parsed) {
 }
 
 /* ── BUILD ROW ── */
-function buildRow(r) {
+function buildRow(r, idx) {
   var cls=CLS[r.normalized_manufacturer]||'';
   var key=favKey(r); var p=parseSnip(r); var u=pdfInfo(r);
-  return '<div class="fc-row">'+
+  var idxAttr=(idx!==undefined)?' onclick="openFocused('+idx+')"':'';
+  return '<div class="fc-row"'+idxAttr+' style="cursor:pointer">'+
     '<div class="fc-strip '+cls+'"></div>'+
     '<div class="fc-code" dir="ltr">'+esc(p.code||'—')+'</div>'+
     '<div class="fc-mid">'+
@@ -1923,8 +1993,8 @@ function buildRow(r) {
       '<div class="fc-desc">'+esc(clean(p.desc)||'')+(p.nemon?'<span class="fc-nemon">  '+esc(p.nemon)+'</span>':'')+'</div>'+
     '</div>'+
     '<div class="fc-acts">'+
-      '<button class="fc-fav'+(isFav(r)?' on':'')+'" data-fk="'+key+'" onclick="toggleFav(\''+key+'\')">★</button>'+
-      (u.noPdf ? '' : '<a class="fc-pdf" href="'+u.href+'" target="_blank" onclick="cachePdf(\'./pdfs/'+r.file+'\')">PDF↗</a>')+
+      '<button class="fc-fav'+(isFav(r)?' on':'')+'" data-fk="'+key+'" onclick="event.stopPropagation();toggleFav(\''+key+'\')">★</button>'+
+      (u.noPdf ? '' : '<a class="fc-pdf" href="'+u.href+'" target="_blank" onclick="event.stopPropagation();cachePdf(\'./pdfs/'+r.file+'\')">PDF↗</a>')+
     '</div></div>';
 }
 
@@ -1979,14 +2049,25 @@ function buildAdvisorCard(r) {
 }
 
 /* ── RENDER ── */
+var _lastRows=[], _lastResEl=null, _lastMetaEl=null, _lastLabel='';
 function renderList(rows, label, focused, resEl, metaEl) {
+  _lastRows=rows; _lastResEl=resEl; _lastMetaEl=metaEl; _lastLabel=label;
   if(metaEl){metaEl.style.display=rows.length?'block':'none';if(rows.length)metaEl.textContent=rows.length+' קודים — '+label;}
   if(!rows.length){resEl.innerHTML='<div class="state-box"><div class="state-icon">—</div><div class="state-title">לא נמצאו תוצאות</div><div class="state-sub">נסה ללא סינון יצרן</div></div>';return;}
   if(focused&&rows.length===1){
     resEl.innerHTML='<div class="focused-lbl">תוצאה ממוקדת</div>'+buildFocused(rows[0]);
   } else {
-    resEl.innerHTML='<div class="list-outer"><div class="fc-list">'+rows.slice(0,200).map(buildRow).join('')+'</div></div>';
+    resEl.innerHTML='<div class="list-outer"><div class="fc-list">'+rows.slice(0,200).map(function(r,i){return buildRow(r,i);}).join('')+'</div></div>';
   }
+}
+function openFocused(idx) {
+  var r=_lastRows[idx]; if(!r)return;
+  _lastResEl.innerHTML=
+    '<div style="padding:8px 10px 0"><button onclick="closeFocused()" style="background:var(--card);border:1px solid var(--line2);border-radius:8px;color:var(--txt2);font-size:12px;font-weight:700;padding:6px 14px;cursor:pointer">← חזור לרשימה</button></div>'+
+    '<div class="focused-lbl">פרטי תקלה</div>'+buildFocused(r);
+}
+function closeFocused() {
+  renderList(_lastRows,_lastLabel,false,_lastResEl,_lastMetaEl);
 }
 
 /* ── DIAGNOSIS ── */
@@ -2099,6 +2180,7 @@ function renderFavs() {
   if(!keys.length){meta.style.display='none';res.innerHTML='<div class="state-box"><div class="state-icon">★</div><div class="state-title">אין מועדפים</div><div class="state-sub">לחץ ★ על קוד כלשהו</div></div>';return;}
   var rows=FAULTS.filter(function(r){return !!FAVS[favKey(r)];});
   meta.style.display='block';meta.textContent=rows.length+' מועדפים';
+  _lastRows=rows;_lastResEl=res;_lastMetaEl=meta;_lastLabel='מועדפים';
   res.innerHTML='<div class="list-outer"><div class="fc-list">'+rows.map(buildRow).join('')+'</div></div>';
 }
 
@@ -2364,7 +2446,7 @@ function stopScan(){
 }
 
 /* ── PIN ── */
-var DEV_MODE=true;
+var DEV_MODE=true; /* auth handled by Cloudflare middleware — JS PIN disabled */
 var _PK='elev_pin',_SK='elev_sess',_SD=90,_pb='',_pset=false,_pf='',_pcb=null;
 function _hp(p){var h=5381;for(var i=0;i<p.length;i++){h=((h<<5)+h)^p.charCodeAt(i);}return(h>>>0).toString(36)+'_'+p.length;}
 function _sok(){try{var s=JSON.parse(localStorage.getItem(_SK)||'{}');return s.exp&&Date.now()<s.exp;}catch(e){return false;}}
@@ -2391,19 +2473,6 @@ function registerSW(){
 function cachePdf(url){if(navigator.serviceWorker&&navigator.serviceWorker.controller)navigator.serviceWorker.controller.postMessage({type:'CACHE_PDF',url:url});}
 
 /* ── ADVISOR ── */
-var ADV_CTRLS = {
-  TKE:       ['CMC4+','CMC4+20.50','CMC3','TAC50K'],
-  KONE:      ['KCE','LCE','KDL16'],
-  Schindler: ['3300','5500'],
-};
-function advSetMfr() {
-  var mfr = document.getElementById('adv-mfr').value;
-  var sel = document.getElementById('adv-ctrl');
-  var ctrls = mfr ? (ADV_CTRLS[mfr] || []) : [];
-  sel.innerHTML = '<option value="">כל הבקרים</option>' +
-    ctrls.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
-  document.getElementById('adv-result').classList.remove('show');
-}
 function normCode(c) {
   return c.replace(/\s/g,'').replace(/^0+([1-9])/, '$1').toLowerCase();
 }
@@ -2448,7 +2517,7 @@ function parseAIText(text) {
     var re = new RegExp('\\*{0,2}'+lbl+'\\*{0,2}:?[ \\t]*', 'i');
     var pos = text.search(re);
     if (pos === -1) return;
-    var afterColon = pos + text.slice(pos).indexOf(lbl) + lbl.length;
+    var afterColon = pos + text.slice(pos).search(re) + text.slice(pos).match(re)[0].length;
     /* skip past optional ** and : */
     var rest = text.slice(afterColon).replace(/^\*{0,2}:?\s*/, '');
     /* cut at next section heading */
@@ -2498,8 +2567,8 @@ function renderAIBlock(id, state, payload) {
 }
 
 function searchAdvisorLocal() {
-  var mfr  = document.getElementById('adv-mfr').value.trim()  || null;
-  var ctrl = document.getElementById('adv-ctrl').value.trim() || null;
+  var mfr  = advMfr  || null;
+  var ctrl = null; /* controller used for AI context only — too strict for local filter */
   var code = document.getElementById('adv-code').value.trim();
   var symp = document.getElementById('adv-symp').value.trim();
   var resultEl = document.getElementById('adv-result');
@@ -2548,8 +2617,8 @@ function formatAnalysis(text) {
 }
 
 function doAiAnalyze() {
-  var mfr  = (document.getElementById('adv-mfr').value  || '').trim();
-  var ctrl = (document.getElementById('adv-ctrl').value || '').trim();
+  var mfr  = advMfr  || '';
+  var ctrl = advCtrl || '';
   var code = (document.getElementById('adv-code').value || '').trim();
   var symp = (document.getElementById('adv-symp').value || '').trim();
   var resultEl = document.getElementById('adv-result');
@@ -2557,39 +2626,67 @@ function doAiAnalyze() {
   var btn      = document.getElementById('adv-ai-btn');
 
   if (!mfr && !code && !symp) {
-    inner.innerHTML = '<div style="padding:16px;color:var(--orange);font-size:13px">יש לבחור יצרן או להזין קוד / סימפטום לפני ניתוח AI</div>';
+    inner.innerHTML = '<div style="padding:16px;color:var(--orange);font-size:13px">יש לבחור יצרן או להזין קוד / סימפטום</div>';
     resultEl.classList.add('show'); return;
   }
 
-  var rows = localRows(mfr||null, ctrl||null, code, symp);
-  var localSnippet = rows.slice(0,5).map(function(r){return r.snippet;}).join('\n');
+  /* ── Step 1: show local results immediately ── */
+  var rows = localRows(mfr||null, null, code, symp);
+  var localSnippet = rows.slice(0,6).map(function(r){return r.snippet;}).join('\n');
+  resultEl.classList.add('show');
+
+  var localHtml = '';
+  if (rows.length) {
+    var lbl = rows.length === 1 ? 'תוצאה ממאגר' : rows.length + ' תוצאות ממאגר';
+    localHtml = '<div style="font-size:10px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3);margin-bottom:10px">📚 '+lbl+'</div>';
+    rows.slice(0,3).forEach(function(r,i){
+      if(i>0) localHtml+='<div style="height:1px;background:var(--line);margin:12px 0"></div>';
+      localHtml+=buildFocused(r);
+    });
+  }
+
+  /* ── Step 2: show AI spinner alongside local results ── */
+  inner.innerHTML = localHtml +
+    '<div id="adv-ai-slot" style="margin-top:14px;padding:18px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px;text-align:center;color:var(--txt2);font-size:13px">'+
+      '🤖 שולח לניתוח AI...'+
+    '</div>';
 
   btn.disabled = true;
   btn.innerHTML = '<span>⏳</span><span>מנתח...</span>';
-  inner.innerHTML = '<div style="padding:24px;text-align:center;color:var(--txt2);font-size:13px">🤖 שולח לניתוח...</div>';
-  resultEl.classList.add('show');
 
+  /* ── Step 3: call AI, update slot when done ── */
   fetch('/api/analyze', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     credentials: 'same-origin',
-    body: JSON.stringify({mfr:mfr, ctrl:ctrl, code:code, symptom:symp, localSnippet:localSnippet})
+    body: JSON.stringify({mfr:mfr, ctrl:ctrl, code:code, symptom:symp,
+      localSnippet:localSnippet,
+      availableDocs:DOCS.filter(function(d){return !mfr||d.mfr===mfr;}).map(function(d){return d.name;}).join(', ')})
   })
   .then(function(r){ return r.json(); })
   .then(function(data) {
-    btn.disabled = false;
-    btn.innerHTML = '<span>🤖</span><span>ניתח עם AI</span>';
+    btn.disabled = false; btn.innerHTML = '<span>🤖</span><span>ניתח עם AI</span>';
+    var slot = document.getElementById('adv-ai-slot');
+    if (!slot) return;
     if (data.error) {
-      inner.innerHTML = '<div style="padding:16px;color:var(--orange);font-size:13px;line-height:1.7"><b>שגיאה:</b> '+esc(data.error)+'</div>';
+      slot.innerHTML = '<div style="color:var(--orange);font-size:12px">⚠ '+esc(data.error)+'</div>';
     } else {
-      inner.innerHTML = '<div class="ai-analysis"><p>'+formatAnalysis(data.analysis)+'</p></div>';
-      resultEl.scrollIntoView({behavior:'smooth',block:'start'});
+      slot.style.textAlign = 'right';
+      slot.innerHTML = '<div style="font-size:10px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;color:var(--acc);margin-bottom:10px">✦ ניתוח AI — Claude Sonnet</div>'+
+        '<div class="ai-analysis">'+formatAnalysis(data.analysis)+'</div>';
+      slot.scrollIntoView({behavior:'smooth',block:'start'});
     }
   })
-  .catch(function(e) {
-    btn.disabled = false;
-    btn.innerHTML = '<span>🤖</span><span>ניתח עם AI</span>';
-    inner.innerHTML = '<div style="padding:16px;color:var(--orange);font-size:13px">שגיאת רשת — '+esc(e.message)+'</div>';
+  .catch(function() {
+    btn.disabled = false; btn.innerHTML = '<span>🤖</span><span>ניתח עם AI</span>';
+    var slot = document.getElementById('adv-ai-slot');
+    if (slot) {
+      if (rows.length) {
+        slot.remove(); /* local results already shown — no need for error msg */
+      } else {
+        slot.innerHTML = '<div style="color:var(--txt3);font-size:12px">AI לא זמין בסביבה זו — עלה לאתר המפורסם לניתוח מלא</div>';
+      }
+    }
   });
 }
 
@@ -2623,7 +2720,7 @@ window.addEventListener('load',function(){
 ══════════════════════════════════════ */
 var libData=null, libLoaded=false, libLoading=false;
 var libOpenCats=new Set(), libShowFavs=false, libCatFilter='';
-var LIB_BASE='http://localhost:8081/מעליות תוכניות/';
+var LIB_BASE='http://localhost:8080/files/מעליות תוכניות/';
 var LIB_IS_LOCAL=true; /* local HTTP — works only on this machine */
 
 var LIB_KIND_COLOR={
@@ -2657,6 +2754,34 @@ function libSetCat(cat){
   renderLib(document.getElementById('lib-inp').value);
 }
 
+var advMfr='', advCtrl='';
+
+function advPickMfr(m){
+  advMfr=(advMfr===m)?'':m;
+  advCtrl='';
+  document.querySelectorAll('.adv-mfr-pill').forEach(function(b){b.classList.toggle('on',b.dataset.mfr===advMfr);});
+  var wrap=document.getElementById('adv-ctrl-wrap');
+  var cp=document.getElementById('adv-ctrl-pills');
+  var ctrls=advMfr&&CTRLS[advMfr]?CTRLS[advMfr]:[];
+  if(ctrls.length){
+    cp.innerHTML=ctrls.map(function(c){
+      return '<button class="ctrl-pill adv-ctrl-pill" data-ctrl="'+c[0]+'" onclick="advPickCtrl(\''+c[0]+'\')">'+c[0]+'<span class="ctrl-cnt"> '+c[1]+'</span></button>';
+    }).join('');
+    wrap.style.display='';
+  } else {
+    wrap.style.display='none';
+    cp.innerHTML='';
+  }
+  document.getElementById('adv-result').classList.remove('show');
+}
+
+function advPickCtrl(c){
+  advCtrl=(advCtrl===c)?'':c;
+  document.querySelectorAll('.adv-ctrl-pill').forEach(function(b){b.classList.toggle('on',b.dataset.ctrl===advCtrl);});
+}
+
+function advFillCtrls(){} /* kept for compatibility */
+
 function loadLib(){
   /* show local-file warning */
   if(LIB_IS_LOCAL){
@@ -2675,6 +2800,13 @@ function loadLib(){
       libData=data; libLoaded=true; libLoading=false;
       var ms=Math.round(performance.now()-t0);
       document.getElementById('lib-count').textContent=data.total.toLocaleString()+' קבצים · '+ms+'ms';
+      /* build category pills */
+      var bycat2={};
+      data.items.forEach(function(i){var c=i.c||'כללי';bycat2[c]=(bycat2[c]||0)+1;});
+      var cats2=Object.keys(bycat2).sort(function(a,b){return bycat2[b]-bycat2[a];});
+      var pillsEl=document.getElementById('lib-cat-pills');
+      pillsEl.innerHTML='<button class="lib-pill on" data-cat="" onclick="libSetCat(\'\')">הכל ('+data.total+')</button>'+
+        cats2.map(function(c){return '<button class="lib-pill" data-cat="'+esc(c)+'" onclick="libSetCat(\''+c.replace(/'/g,"%27")+'\')">'+esc(c)+' ('+bycat2[c]+')</button>';}).join('');
       renderLib('');
     })
     .catch(function(){
@@ -2701,9 +2833,9 @@ function libFileRow(item,hl){
     nm=nm.replace(re,'<mark style="background:#F59E0B44;color:#FFF;border-radius:2px">$1</mark>');
   }
   var subPath=item.p?(item.p.split('/').slice(1).join('/')||''):'';
-  var safeP=item.p.replace(/\\/g,'/').replace(/'/g,"\\'");
-  var safeN=item.n.replace(/'/g,"\\'");
-  return '<div class="lib-file-row" onclick="libOpenFile(\''+safeP+'\',\''+safeN+'\')">' +
+  var url=libBuildUrl(item.p,item.n);
+  var encKey=encodeURIComponent(key);
+  return '<div class="lib-file-row" data-url="'+esc(url)+'" onclick="libOpenByAttr(this)">' +
     '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">' +
       libKindBadge(item.k)+
       '<div style="min-width:0">' +
@@ -2713,17 +2845,19 @@ function libFileRow(item,hl){
     '</div>'+
     '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+
       '<span style="font-size:10px;color:var(--txt3);white-space:nowrap">'+item.sl+'</span>'+
-      '<span onclick="event.stopPropagation();libFavClick(\''+key.replace(/'/g,'%27')+'\')" style="font-size:16px;cursor:pointer;line-height:1;color:'+(fav?'#F59E0B':'var(--txt3)')+'">★</span>'+
+      '<span data-fav-key="'+encKey+'" onclick="event.stopPropagation();libFavByAttr(this)" style="font-size:16px;cursor:pointer;line-height:1;color:'+(fav?'#F59E0B':'var(--txt3)')+'">★</span>'+
     '</div>'+
   '</div>';
 }
 
-function libOpenFile(p,n){
-  var url=LIB_BASE+p.split('/').map(encodeURIComponent).join('/')+'/'+encodeURIComponent(n);
-  window.open(url,'_blank');
+function libBuildUrl(p,n){
+  var path=p?p.split('/').map(encodeURIComponent).join('/')+'/'  :'';
+  return LIB_BASE+path+encodeURIComponent(n);
 }
-function libFavClick(key){
-  libToggleFavKey(decodeURIComponent(key));
+function libOpenFile(p,n){ window.open(libBuildUrl(p,n),'_blank'); }
+function libOpenByAttr(el){ window.open(el.dataset.url,'_blank'); }
+function libFavByAttr(el){
+  libToggleFavKey(decodeURIComponent(el.dataset.favKey));
   renderLib(document.getElementById('lib-inp').value);
 }
 

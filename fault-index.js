@@ -4,7 +4,7 @@ var FAULTS = [];
 
 function loadFaultIndex() {
   if (FAULTS.length > 0) { return Promise.resolve(); }
-  return fetch(FAULT_JSON_URL, { cache: 'no-store' })
+  return fetch(FAULT_JSON_URL)
     .then(function(res) { return res.json(); })
     .then(function(data) { FAULTS = data; });
 }
@@ -32,7 +32,7 @@ function searchFaults(manufacturer, controller, keyword) {
       var num = parseInt(search, 10);
       numVariants = [
         'code ' + num + ' ',
-        'code ' + num + '|',
+        'code ' + num + ' |',
         String(num).padStart(2, '0'),
         String(num).padStart(3, '0'),
         String(num).padStart(4, '0'),
