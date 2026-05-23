@@ -8,8 +8,8 @@
  * To enable auth in future: add auth check here before context.next()
  */
 
-var CACHE_CORE = 'elevator-core-v11';
-var CACHE_PDF  = 'elevator-docs-v11';
+var CACHE_CORE = 'elevator-core-v12';
+var CACHE_PDF  = 'elevator-docs-v12';
 
 /* Only lightweight core files — NO PDFs, NO MRL files, NO library */
 var PRECACHE = [
